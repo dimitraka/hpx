@@ -151,9 +151,10 @@ namespace hpx { namespace lcos { namespace detail {
     struct post_policy_spawner
     {
         template <typename F>
-        void operator()(F&& f, hpx::util::thread_description desc)
+        threads::thread_id_ref_type operator()(
+            F&& f, hpx::util::thread_description desc) const
         {
-            parallel::execution::detail::post_policy_dispatch<
+            return parallel::execution::detail::post_policy_dispatch<
                 hpx::launch::async_policy>::call(hpx::launch::async, desc,
                 std::forward<F>(f));
         }
@@ -165,9 +166,11 @@ namespace hpx { namespace lcos { namespace detail {
         Executor exec;
 
         template <typename F>
-        void operator()(F&& f, hpx::util::thread_description)
+        threads::thread_id_ref_type operator()(
+            F&& f, hpx::util::thread_description)
         {
             hpx::parallel::execution::post(exec, std::forward<F>(f));
+            return threads::invalid_thread_id;
         }
     };
 

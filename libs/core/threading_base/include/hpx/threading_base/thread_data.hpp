@@ -508,6 +508,13 @@ namespace hpx { namespace threads {
         void run_thread_exit_callbacks();
         void free_thread_exit_callbacks();
 
+        // no need to protect the variables related to scoped children as those
+        // are supposed to be accessed by ourselves only
+        bool runs_as_child() const noexcept
+        {
+            return runs_as_child_;
+        }
+
         HPX_FORCEINLINE bool is_stackless() const noexcept
         {
             return is_stackless_;
@@ -556,6 +563,14 @@ namespace hpx { namespace threads {
         inline coroutine_type::result_type operator()(
             hpx::execution_base::this_thread::detail::agent_storage*
                 agent_storage);
+
+        /// \brief Directly execute the thread function (inline)
+        ///
+        /// \returns        This function returns the thread state the thread
+        ///                 should be scheduled from this point on. The thread
+        ///                 manager will use the returned value to set the
+        ///                 thread's scheduling status.
+        inline coroutine_type::result_type invoke_directly();
 
         virtual thread_id_type get_thread_id() const
         {
@@ -643,6 +658,9 @@ namespace hpx { namespace threads {
         bool enabled_interrupt_;
         bool ran_exit_funcs_;
         bool const is_stackless_;
+
+        // support scoped child execution
+        bool runs_as_child_;
 
         // Singly linked list (heap-allocated)
         std::forward_list<util::function_nonser<void()>> exit_funcs_;
@@ -753,10 +771,25 @@ namespace hpx { namespace threads {
     HPX_FORCEINLINE coroutine_type::result_type thread_data::operator()(
         hpx::execution_base::this_thread::detail::agent_storage* agent_storage)
     {
+        // once a thread has started it can't be run directly anymore
+        runs_as_child_ = false;
+
         if (is_stackless())
         {
             return static_cast<thread_data_stackless*>(this)->call();
         }
+
         return static_cast<thread_data_stackful*>(this)->call(agent_storage);
+    }
+
+    HPX_FORCEINLINE coroutine_type::result_type thread_data::invoke_directly()
+    {
+        HPX_ASSERT(runs_as_child());
+
+        if (is_stackless())
+        {
+            return static_cast<thread_data_stackless*>(this)->call();
+        }
+        return static_cast<thread_data_stackful*>(this)->invoke_directly();
     }
 }}    // namespace hpx::threads

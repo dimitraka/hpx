@@ -86,8 +86,11 @@ namespace hpx { namespace threads { namespace detail {
 
         // create the new thread
         if (data.priority == thread_priority::default_)
+        {
             data.priority = thread_priority::normal;
+        }
 
+        HPX_ASSERT(!data.run_now);
         data.run_now = (thread_priority::high == data.priority ||
             thread_priority::high_recursive == data.priority ||
             thread_priority::boost == data.priority);
