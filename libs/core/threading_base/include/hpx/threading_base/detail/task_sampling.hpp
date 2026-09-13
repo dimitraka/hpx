@@ -11,15 +11,31 @@
 
 #if defined(HPX_HAVE_TRACY)
 
+#include <atomic>
+
 namespace hpx::threads::detail {
 
-    // Per-worker countdown; thread_local, so no atomic. Counter starts
-    // at 0, so each worker's first task is always sampled.
-    inline thread_local int tl_sample_countdown = 0;
+    // 1-in-N task-sampling rate. Initialized from HPX_TRACING_SAMPLE_RATE
+    // (CMake compile-time default); runtime override applied at startup
+    // via hpx::threads::set_tracing_sample_rate() in tracing_sample_rate.hpp.
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT extern std::atomic<int> sample_rate;
 
-    /// 1-in-N countdown, factored out with Rate as a template parameter
-    /// so the unit test can exercise any rate independently of the build
-    /// setting. Production goes through should_sample_next() below.
+    // Internal setter. The public entry point is
+    // hpx::threads::set_tracing_sample_rate().
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_sample_rate(int rate) noexcept;
+
+    // HPX_NOINLINE so the thread_local address is looked up fresh on each
+    // call - a cached address would be wrong once a task migrates workers.
+    template <typename Integral = int>
+    HPX_NOINLINE Integral& sample_countdown()
+    {
+        thread_local Integral sample_countdown = 0;
+        return sample_countdown;
+    }
+
+    /// 1-in-N countdown with Rate as a template parameter for the unit
+    /// test to exercise any rate independently of the build setting.
+    /// Production goes through should_sample_next() below.
     template <int Rate>
     inline bool sample_next(int& counter) noexcept
     {
@@ -34,13 +50,18 @@ namespace hpx::threads::detail {
         }
     }
 
-    /// Returns true when the next task should be sampled. Called from
-    /// thread_data's ctor and rebind_base, exactly once per task creation.
-    /// Rate is baked in at build time via HPX_TRACING_SAMPLE_RATE; the
-    /// default (1) collapses the body to `return true` at compile time.
+    /// Returns true when the next task should be sampled, based on the
+    /// runtime sample_rate.
     inline bool should_sample_next() noexcept
     {
-        return sample_next<HPX_TRACING_SAMPLE_RATE>(tl_sample_countdown);
+        int const rate = sample_rate.load(std::memory_order_relaxed);
+        if (rate <= 1)
+            return true;
+        int& counter = sample_countdown<int>();
+        if (--counter > 0)
+            return false;
+        counter = rate;
+        return true;
     }
 }    // namespace hpx::threads::detail
 

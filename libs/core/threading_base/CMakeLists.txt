@@ -40,6 +40,7 @@ set(threading_base_headers
     hpx/threading_base/thread_queue_init_parameters.hpp
     hpx/threading_base/thread_specific_ptr.hpp
     hpx/threading_base/threading_base_fwd.hpp
+    hpx/threading_base/tracing_sample_rate.hpp
 )
 
 if(HPX_WITH_APEX)
@@ -76,6 +77,7 @@ set(threading_base_sources
     create_work.cpp
     detail/reset_backtrace.cpp
     detail/reset_lco_description.cpp
+    detail/task_sampling.cpp
     execution_agent.cpp
     external_timer.cpp
     get_default_pool.cpp
