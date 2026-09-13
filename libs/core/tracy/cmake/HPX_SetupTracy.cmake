@@ -72,6 +72,13 @@ elseif(NOT TARGET tracy::tracy)
   target_compile_definitions(
     TracyClient PUBLIC $<$<CONFIG:Debug>:TRACY_VERBOSE>
   )
+  # Serialise Tracy's DbgHelp calls against HPX's own via the wrappers in
+  # hpx_debugging (dbghelp_lock.cpp). Only applies on the FetchContent path; a
+  # system-supplied Tracy must be built with the same define for full interlock
+  # (documented in optimizing_hpx_applications.rst).
+  if(WIN32)
+    target_compile_definitions(TracyClient PUBLIC TRACY_DBGHELP_LOCK=HpxDbgHelp)
+  endif()
   target_compile_features(TracyClient PRIVATE cxx_std_${HPX_CXX_STANDARD})
 
   # cmake-format: off
