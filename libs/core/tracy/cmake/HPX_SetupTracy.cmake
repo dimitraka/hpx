@@ -25,6 +25,15 @@ if(NOT HPX_WITH_FETCH_TRACY)
   if(TARGET Tracy::TracyClient AND NOT TARGET tracy::tracy)
     add_library(tracy::tracy ALIAS Tracy::TracyClient)
   endif()
+  # We cannot detect whether the system Tracy was built with
+  # TRACY_DBGHELP_LOCK=HpxDbgHelp (Tracy does not record it on the imported
+  # target). Warn on Windows so a mismatch is not silent; either rebuild the
+  # system Tracy with the define, or set HPX_WITH_FETCH_TRACY=ON.
+  if(WIN32)
+    hpx_warn(
+      "HPX_WITH_FETCH_TRACY=OFF on Windows: cannot verify the system Tracy was built with TRACY_DBGHELP_LOCK=HpxDbgHelp. Rebuild Tracy with -DTRACY_DBGHELP_LOCK=HpxDbgHelp, or set HPX_WITH_FETCH_TRACY=ON."
+    )
+  endif()
 elseif(NOT TARGET tracy::tracy)
   if(FETCHCONTENT_SOURCE_DIR_TRACY)
     hpx_info(
@@ -76,6 +85,13 @@ elseif(NOT TARGET tracy::tracy)
   # hpx_debugging (dbghelp_lock.cpp). Only applies on the FetchContent path; a
   # system-supplied Tracy must be built with the same define for full interlock
   # (documented in optimizing_hpx_applications.rst).
+  #
+  # BUILD_SHARED_LIBS=ON turns TracyClient into a shared library, which would
+  # then need HpxDbgHelp* resolved at its own link step. hpx_debugging provides
+  # those symbols but TracyClient does not depend on it; hpx_tracy is what links
+  # both, so a static TracyClient resolves when hpx_tracy links, while a shared
+  # TracyClient does not. Static TracyClient (the default when BUILD_SHARED_LIBS
+  # is unset or OFF) is the supported configuration.
   if(WIN32)
     target_compile_definitions(TracyClient PUBLIC TRACY_DBGHELP_LOCK=HpxDbgHelp)
   endif()

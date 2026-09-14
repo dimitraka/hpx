@@ -12,7 +12,7 @@
 // Windows-only. DbgHelp is single-threaded per MSDN and both HPX and
 // Tracy call it. This header declares the shared lock; Tracy reaches
 // it via TRACY_DBGHELP_LOCK=HpxDbgHelp in HPX_SetupTracy.cmake.
-#if defined(HPX_MSVC)
+#if defined(HPX_WINDOWS)
 
 namespace hpx::util::detail {
 
@@ -34,4 +34,4 @@ namespace hpx::util::detail {
     };
 }    // namespace hpx::util::detail
 
-#endif    // HPX_MSVC
+#endif    // HPX_WINDOWS

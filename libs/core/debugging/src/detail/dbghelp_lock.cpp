@@ -7,7 +7,7 @@
 
 #include <hpx/config.hpp>
 
-#if defined(HPX_MSVC)
+#if defined(HPX_WINDOWS)
 
 #include <hpx/debugging/detail/dbghelp_lock.hpp>
 
@@ -15,39 +15,58 @@
 
 namespace {
 
-    // Process-wide mutex; every DbgHelp call from HPX and (via
-    // TRACY_DBGHELP_LOCK below) from Tracy's client goes through it.
-    std::mutex g_dbghelp_mtx;
+    // Function-local static so the mutex is constructed on first use,
+    // with no static-init ordering question across DLL boundaries.
+    std::mutex& dbghelp_mutex() noexcept
+    {
+        static std::mutex m;
+        return m;
+    }
 
 }    // namespace
 
+// PREfast flags each of these functions for an unpaired lock/unlock. That
+// is the contract, not a bug. Match the suppression pattern used in
+// libs/core/futures/include/hpx/futures/detail/future_data.hpp.
+#if defined(HPX_MSVC)
+#pragma warning(push)
+#pragma warning(disable : 26110 26111 26115 26117)
+#endif
+
 namespace hpx::util::detail {
 
+    // noexcept over a throwing std::mutex::lock() is deliberate: the
+    // resulting std::terminate is the fail-fast we want, since we cannot
+    // safely proceed with DbgHelp calls if the lock is unavailable.
     void dbghelp_lock() noexcept
     {
-        g_dbghelp_mtx.lock();
+        dbghelp_mutex().lock();
     }
 
     void dbghelp_unlock() noexcept
     {
-        g_dbghelp_mtx.unlock();
+        dbghelp_mutex().unlock();
     }
 }    // namespace hpx::util::detail
 
 // Tracy interop entry points. TRACY_DBGHELP_LOCK=HpxDbgHelp in
 // HPX_SetupTracy.cmake makes Tracy expand its DbgHelp lock macros
-// to these three symbols. Init is empty - the mutex is static-init
-// and ready before Tracy's bootstrap runs.
+// to these three symbols. Init is empty; first-use construction of
+// the mutex above covers the same job.
 extern "C" HPX_CORE_EXPORT void HpxDbgHelpInit(void) {}
 
 extern "C" HPX_CORE_EXPORT void HpxDbgHelpLock(void)
 {
-    g_dbghelp_mtx.lock();
+    dbghelp_mutex().lock();
 }
 
 extern "C" HPX_CORE_EXPORT void HpxDbgHelpUnlock(void)
 {
-    g_dbghelp_mtx.unlock();
+    dbghelp_mutex().unlock();
 }
 
-#endif    // HPX_MSVC
+#if defined(HPX_MSVC)
+#pragma warning(pop)
+#endif
+
+#endif    // HPX_WINDOWS
