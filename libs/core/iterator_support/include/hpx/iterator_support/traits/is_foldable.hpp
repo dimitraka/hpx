@@ -23,7 +23,7 @@ namespace hpx {
         std::assignable_from<U&,
             std::invoke_result_t<F&, U, std::iter_reference_t<I>>>;
 
-    template <typename F, typename T, typename I>
+    HPX_CXX_CORE_EXPORT template <typename F, typename T, typename I>
     concept is_indirectly_binary_left_foldable =
         std::copy_constructible<F> && std::indirectly_readable<I> &&
         std::invocable<F&, T, std::iter_reference_t<I>> &&
@@ -43,7 +43,7 @@ namespace hpx {
         std::assignable_from<U&,
             std::invoke_result_t<F&, std::iter_reference_t<I>, U>>;
 
-    template <typename F, typename T, typename I>
+    HPX_CXX_CORE_EXPORT template <typename F, typename T, typename I>
     concept is_indirectly_binary_right_foldable =
         std::copy_constructible<F> && std::indirectly_readable<I> &&
         std::invocable<F&, std::iter_reference_t<I>, T> &&
