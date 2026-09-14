@@ -61,6 +61,10 @@ namespace hpx::execution::detail {
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor>
     struct rebind_policy_executor
     {
+    private:
+        using decayed_policy_type = std::decay_t<Policy>;
+
+    public:
         /// \brief The type of Policy rebound to Executor, with its
         ///        executor parameters left unchanged.
         ///
@@ -68,9 +72,9 @@ namespace hpx::execution::detail {
         /// \c rebind<Executor_, Parameters_>::type member template,
         /// supplying Policy's current \c executor_parameters_type as the
         /// Parameters_ argument so that only the executor changes.
-        using type = typename std::decay_t<Policy>::template rebind<
+        using type = typename decayed_policy_type::template rebind
             std::decay_t<Executor>,
-            typename std::decay_t<Policy>::executor_parameters_type>::type;
+            typename decayed_policy_type::executor_parameters_type>::type;
     };
 
     /// \brief Convenience alias for
@@ -106,6 +110,10 @@ namespace hpx::execution::detail {
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Parameters>
     struct rebind_policy_parameters
     {
+    private:
+        using decayed_policy_type = std::decay_t<Policy>;
+
+    public:
         /// \brief The type of Policy rebound to Parameters, with its
         ///        executor left unchanged.
         ///
@@ -113,8 +121,8 @@ namespace hpx::execution::detail {
         /// \c rebind<Executor_, Parameters_>::type member template,
         /// supplying Policy's current \c executor_type as the Executor_
         /// argument so that only the executor parameters change.
-        using type = typename std::decay_t<Policy>::template rebind<
-            typename std::decay_t<Policy>::executor_type,
+        using type = typename decayed_policy_type::template rebind
+            typename decayed_policy_type::executor_type,
             std::decay_t<Parameters>>::type;
     };
 
