@@ -368,25 +368,20 @@ namespace hpx::detail {
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::simd_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
-        static constexpr bool is_rebound = false;
-        static constexpr bool is_parallel = false;
         static constexpr bool is_sequenced = true;
-        static constexpr bool is_unsequenced = false;
-        static constexpr bool is_async = false;
         static constexpr bool is_vectorpack = true;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::simd_task_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
-        static constexpr bool is_rebound = false;
-        static constexpr bool is_parallel = false;
         static constexpr bool is_sequenced = true;
-        static constexpr bool is_unsequenced = false;
         static constexpr bool is_async = true;
         static constexpr bool is_vectorpack = true;
     };
@@ -394,25 +389,20 @@ namespace hpx::detail {
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::par_simd_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
-        static constexpr bool is_rebound = false;
         static constexpr bool is_parallel = true;
-        static constexpr bool is_sequenced = false;
-        static constexpr bool is_unsequenced = false;
-        static constexpr bool is_async = false;
         static constexpr bool is_vectorpack = true;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::par_simd_task_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
-        static constexpr bool is_rebound = false;
         static constexpr bool is_parallel = true;
-        static constexpr bool is_sequenced = false;
-        static constexpr bool is_unsequenced = false;
         static constexpr bool is_async = true;
         static constexpr bool is_vectorpack = true;
     };

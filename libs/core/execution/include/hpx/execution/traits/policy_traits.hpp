@@ -12,26 +12,16 @@
 
 namespace hpx::detail {
 
-    /// \brief Canonical description of the properties of a concrete
-    ///        execution policy type.
+    /// \brief Default value for every policy_traits member.
     ///
-    /// A new execution policy is made known to the is_execution_policy,
-    /// is_parallel_execution_policy, is_sequenced_execution_policy,
-    /// is_unsequenced_execution_policy, is_async_execution_policy,
-    /// is_rebound_execution_policy, and is_vectorpack_execution_policy
-    /// customization points by specializing policy_traits for that policy's
-    /// type and setting the members below, instead of specializing each of
-    /// those traits individually.
-    ///
-    /// The primary template below is the fallback used for any type that is
-    /// not a recognized execution policy; every member defaults to false.
-    /// The behavior of a program that specializes any of the individual
-    /// is_*_execution_policy traits directly, rather than policy_traits,
-    /// remains unaffected: an explicit specialization of one of those traits
-    /// always takes precedence over the definition derived from
-    /// policy_traits.
-    HPX_CXX_CORE_EXPORT template <typename Policy>
-    struct policy_traits
+    /// policy_traits itself, and every specialization of policy_traits,
+    /// derives from policy_traits_default, so a specialization only needs
+    /// to declare the members that differ from the default; every member
+    /// it does not redeclare is inherited as false. This also means a new
+    /// member added here is picked up by every existing specialization
+    /// automatically, instead of silently being left undefined until each
+    /// specialization is updated by hand.
+    HPX_CXX_CORE_EXPORT struct policy_traits_default
     {
         /// Whether Policy is a recognized HPX execution policy.
         static constexpr bool is_policy = false;
@@ -58,5 +48,29 @@ namespace hpx::detail {
         /// Whether Policy operates on vector packs rather than individual
         /// elements.
         static constexpr bool is_vectorpack = false;
+    };
+
+    /// \brief Canonical description of the properties of a concrete
+    ///        execution policy type.
+    ///
+    /// A new execution policy is made known to the is_execution_policy,
+    /// is_parallel_execution_policy, is_sequenced_execution_policy,
+    /// is_unsequenced_execution_policy, is_async_execution_policy,
+    /// is_rebound_execution_policy, and is_vectorpack_execution_policy
+    /// customization points by specializing policy_traits for that policy's
+    /// type, deriving the specialization from policy_traits_default, and
+    /// setting only the members that are true, instead of specializing each
+    /// of those traits individually.
+    ///
+    /// The primary template below is the fallback used for any type that is
+    /// not a recognized execution policy; it inherits every member as false
+    /// from policy_traits_default. The behavior of a program that
+    /// specializes any of the individual is_*_execution_policy traits
+    /// directly, rather than policy_traits, remains unaffected: an explicit
+    /// specialization of one of those traits always takes precedence over
+    /// the definition derived from policy_traits.
+    HPX_CXX_CORE_EXPORT template <typename Policy>
+    struct policy_traits : policy_traits_default
+    {
     };
 }    // namespace hpx::detail

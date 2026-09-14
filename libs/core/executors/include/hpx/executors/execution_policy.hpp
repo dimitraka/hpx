@@ -1317,70 +1317,61 @@ namespace hpx::detail {
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::sequenced_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
-        static constexpr bool is_parallel = false;
         static constexpr bool is_sequenced = true;
-        static constexpr bool is_unsequenced = false;
-        static constexpr bool is_async = false;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<hpx::execution::detail::sequenced_task_policy_shim<
-        Executor, Parameters>>
+        Executor, Parameters>> : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
-        static constexpr bool is_parallel = false;
         static constexpr bool is_sequenced = true;
-        static constexpr bool is_unsequenced = false;
         static constexpr bool is_async = true;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::parallel_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
         static constexpr bool is_parallel = true;
-        static constexpr bool is_sequenced = false;
-        static constexpr bool is_unsequenced = false;
-        static constexpr bool is_async = false;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::parallel_task_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
         static constexpr bool is_parallel = true;
-        static constexpr bool is_sequenced = false;
-        static constexpr bool is_unsequenced = false;
         static constexpr bool is_async = true;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::execution::detail::unsequenced_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
-        static constexpr bool is_parallel = false;
         static constexpr bool is_sequenced = true;
         static constexpr bool is_unsequenced = true;
-        static constexpr bool is_async = false;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<hpx::execution::detail::unsequenced_task_policy_shim<
-        Executor, Parameters>>
+        Executor, Parameters>> : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
-        static constexpr bool is_parallel = false;
         static constexpr bool is_sequenced = true;
         static constexpr bool is_unsequenced = true;
         static constexpr bool is_async = true;
@@ -1389,23 +1380,22 @@ namespace hpx::detail {
     template <typename Executor, typename Parameters>
     struct policy_traits<hpx::execution::detail::
             parallel_unsequenced_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
         static constexpr bool is_parallel = true;
-        static constexpr bool is_sequenced = false;
         static constexpr bool is_unsequenced = true;
-        static constexpr bool is_async = false;
     };
 
     template <typename Executor, typename Parameters>
     struct policy_traits<hpx::execution::detail::
             parallel_unsequenced_task_policy_shim<Executor, Parameters>>
+      : policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
         static constexpr bool is_parallel = true;
-        static constexpr bool is_sequenced = false;
         static constexpr bool is_unsequenced = true;
         static constexpr bool is_async = true;
     };
