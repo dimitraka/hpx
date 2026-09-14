@@ -375,6 +375,14 @@ namespace hpx::util {
             detail::zip_iterator_base<hpx::tuple<Ts...>, zip_iterator<Ts...>>;
 
     public:
+        // Disable the operator_brackets_proxy returned from iterator_facade's
+        // operator[]: our reference type (a tuple of references) remains valid
+        // even when the iterator itself is a temporary, so dereferencing can
+        // go straight through to the underlying iterators. The proxy would
+        // additionally break constrained projections (e.g. extract_key used
+        // by sort_by_key) that expect a tuple-like argument.
+        using use_brackets_proxy = std::false_type;
+
         HPX_HOST_DEVICE zip_iterator() = default;
 
         HPX_HOST_DEVICE explicit constexpr zip_iterator(
@@ -455,6 +463,14 @@ namespace hpx::util {
             zip_iterator<hpx::tuple<Ts...>>>;
 
     public:
+        // Disable the operator_brackets_proxy returned from iterator_facade's
+        // operator[]: our reference type (a tuple of references) remains valid
+        // even when the iterator itself is a temporary, so dereferencing can
+        // go straight through to the underlying iterators. The proxy would
+        // additionally break constrained projections (e.g. extract_key used
+        // by sort_by_key) that expect a tuple-like argument.
+        using use_brackets_proxy = std::false_type;
+
         HPX_HOST_DEVICE zip_iterator() = default;
 
         HPX_HOST_DEVICE explicit constexpr zip_iterator(
