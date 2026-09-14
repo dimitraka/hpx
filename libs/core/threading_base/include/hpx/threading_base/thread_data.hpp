@@ -504,7 +504,7 @@ namespace hpx::threads {
         ///
         /// \returns \a true if lifecycle events should be emitted for
         ///          this task.
-        bool should_emit_lifecycle() const noexcept
+        constexpr bool should_emit_lifecycle() const noexcept
         {
 #if defined(HPX_HAVE_TRACY)
             return emit_lifecycle_;
