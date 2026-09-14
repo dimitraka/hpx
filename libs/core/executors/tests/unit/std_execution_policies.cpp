@@ -62,6 +62,7 @@ void static_checks()
         "::value");
 #endif
 
+#if defined(HPX_HAVE_CXX17_STD_EXECUTION_POLICES)
     // The remaining four traits are false for every std:: execution policy
     // tested above; none of them is a rebound policy (they are not produced
     // by rebinding an executor or parameters onto another policy), none
@@ -126,6 +127,7 @@ void static_checks()
         "!hpx::is_unsequenced_execution_policy<std::execution::parallel_"
         "unsequenced_policy>::value");
 
+#endif
 #if defined(HPX_HAVE_CXX20_STD_EXECUTION_POLICES)
     static_assert(!hpx::is_rebound_execution_policy<
                       std::execution::unsequenced_policy>::value,
