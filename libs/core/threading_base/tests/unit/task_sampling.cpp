@@ -80,5 +80,25 @@ int main()
         HPX_TEST_EQ(emitted, 1000);
     }
 
+    // Runtime path: a rate change mid-cycle abandons the in-flight
+    // countdown and starts a fresh one at the new rate, so the next
+    // call after the change emits regardless of where the old cycle
+    // stood. Without this reset a worker mid-cycle at rate 100 would
+    // skip up to 99 tasks before a new rate of 2 took effect.
+    {
+        // Seed the TLS with a rate different from both 100 and 2 so the
+        // block is independent of whatever earlier blocks left behind.
+        set_tracing_sample_rate(3);
+        (void) should_sample_next();
+
+        set_tracing_sample_rate(100);
+        HPX_TEST(should_sample_next());     // rate change: fresh cycle, emit
+        HPX_TEST(!should_sample_next());    // rate-100 cycle: skip
+        set_tracing_sample_rate(2);
+        HPX_TEST(should_sample_next());     // rate change: emit now
+        HPX_TEST(!should_sample_next());    // rate-2 cycle: skip
+        HPX_TEST(should_sample_next());     // rate-2 cycle: emit
+    }
+
     return hpx::util::report_errors();
 }

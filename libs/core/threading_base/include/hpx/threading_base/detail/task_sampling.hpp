@@ -24,13 +24,22 @@ namespace hpx::threads::detail {
     // hpx::threads::set_tracing_sample_rate().
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_sample_rate(int rate) noexcept;
 
+    // Per-worker sampling state. last_rate is the rate value that seeded
+    // the current countdown; when it disagrees with the runtime rate, the
+    // cycle is abandoned and a fresh one starts at the new rate.
+    struct sample_state
+    {
+        int countdown = 0;
+        int last_rate = 0;
+    };
+
     // HPX_NOINLINE so the thread_local address is looked up fresh on each
     // call - a cached address would be wrong once a task migrates workers.
-    template <typename Integral = int>
-    HPX_NOINLINE Integral& sample_countdown()
+    template <typename State = sample_state>
+    HPX_NOINLINE State& sample_state_tls()
     {
-        thread_local Integral sample_countdown = 0;
-        return sample_countdown;
+        thread_local State state{};
+        return state;
     }
 
     /// 1-in-N countdown with Rate as a template parameter for the unit
@@ -57,10 +66,16 @@ namespace hpx::threads::detail {
         int const rate = sample_rate.load(std::memory_order_relaxed);
         if (rate <= 1)
             return true;
-        int& counter = sample_countdown<int>();
-        if (--counter > 0)
+        sample_state& s = sample_state_tls();
+        if (s.last_rate != rate)
+        {
+            s.last_rate = rate;
+            s.countdown = rate;
+            return true;
+        }
+        if (--s.countdown > 0)
             return false;
-        counter = rate;
+        s.countdown = rate;
         return true;
     }
 }    // namespace hpx::threads::detail

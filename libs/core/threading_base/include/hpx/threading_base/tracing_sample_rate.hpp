@@ -13,10 +13,12 @@
 
 namespace hpx::threads {
 
-    /// Set the 1-in-N tracing sample rate at runtime. Rates below 1 are
-    /// clamped to 1 (emit every task). Called from init_global_data with
-    /// the value from hpx.tracing.sample_rate; can be re-invoked from
-    /// user code between task-creation waves.
+    /// Set the 1-in-N tracing sample rate at runtime. Called from
+    /// init_global_data with the value from hpx.tracing.sample_rate;
+    /// safe to re-invoke from user code, each worker abandons its
+    /// current cycle and starts a fresh one on the next task creation.
+    ///
+    /// \param rate  Emit one task in N. Values below 1 are clamped to 1.
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_tracing_sample_rate(
         int rate) noexcept;
 }    // namespace hpx::threads
