@@ -444,6 +444,21 @@ namespace hpx::compute::host {
 #endif
         }
 
+        /// Touches every page of the allocation starting at \a p so that
+        /// each page is physically bound to the NUMA domain assigned to it
+        /// by \a binding_helper_. One first-touch task per NUMA domain is
+        /// dispatched and the call blocks until all of them complete.
+        ///
+        /// \pre Must be called from an HPX thread. init_mutex serializes
+        /// concurrent calls to this function and is intentionally held
+        /// across hpx::wait_all() below, which is a suspension point that
+        /// may resume the calling HPX thread on a different OS worker
+        /// thread. hpx::mutex (unlike std::mutex) supports this safely, and
+        /// ignore_while_checking silences the HPX lock-checking layer's
+        /// warning about a lock spanning a suspension point.
+        ///
+        /// \param p pointer to the start of the allocation to initialize.
+        /// \param n number of elements to initialize.
         void initialize_pages(pointer p, size_t n) const
         {
             // initialize_pages() is expected to run on an HPX thread. The
@@ -505,6 +520,17 @@ namespace hpx::compute::host {
             nba_deb.debug(debug::str<>("First-Touch"), "Done tasks");
         }
 
+        /// Builds a human-readable, page-by-page description of how the
+        /// allocation starting at \a p is bound across NUMA domains,
+        /// suitable for debug output. init_mutex is held only for the
+        /// duration of this synchronous call; unlike initialize_pages(), no
+        /// suspension point is crossed while it is held.
+        ///
+        /// \param p pointer to the start of the allocation to describe.
+        /// \param helper binding helper describing the array layout used to
+        /// compute per-page offsets.
+        /// \return a formatted string describing the domain binding of each
+        /// page in the allocation.
         std::string display_binding(pointer p, numa_binding_helper_ptr helper)
         {
             std::unique_lock<hpx::mutex> lk(init_mutex);
