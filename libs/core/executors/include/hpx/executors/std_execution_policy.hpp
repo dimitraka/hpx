@@ -23,51 +23,52 @@ namespace hpx::detail {
 
     /// \cond NOINTERNAL
     template <>
-    struct is_execution_policy<std::execution::sequenced_policy>
-      : std::true_type
+    struct policy_traits<std::execution::sequenced_policy>
     {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = false;
+        static constexpr bool is_sequenced = true;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
     };
 
     template <>
-    struct is_execution_policy<std::execution::parallel_policy> : std::true_type
+    struct policy_traits<std::execution::parallel_policy>
     {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
     };
 
     template <>
-    struct is_execution_policy<std::execution::parallel_unsequenced_policy>
-      : std::true_type
+    struct policy_traits<std::execution::parallel_unsequenced_policy>
     {
-    };
-
-    template <>
-    struct is_parallel_execution_policy<std::execution::parallel_policy>
-      : std::true_type
-    {
-    };
-
-    template <>
-    struct is_parallel_execution_policy<
-        std::execution::parallel_unsequenced_policy> : std::true_type
-    {
-    };
-
-    template <>
-    struct is_sequenced_execution_policy<std::execution::sequenced_policy>
-      : std::true_type
-    {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
     };
 
 #if defined(HPX_HAVE_CXX20_STD_EXECUTION_POLICES)
     template <>
-    struct is_execution_policy<std::execution::unsequenced_policy>
-      : std::true_type
+    struct policy_traits<std::execution::unsequenced_policy>
     {
-    };
-
-    template <>
-    struct is_sequenced_execution_policy<std::execution::unsequenced_policy>
-      : std::true_type
-    {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = false;
+        static constexpr bool is_sequenced = true;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
     };
 #endif
     /// \endcond

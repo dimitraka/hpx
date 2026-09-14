@@ -53,7 +53,8 @@ namespace hpx::detail {
     };
 
     HPX_CXX_CORE_EXPORT template <typename Executor>
-    struct is_vectorpack_execution_policy : std::false_type
+    struct is_vectorpack_execution_policy
+      : std::bool_constant<policy_traits<Executor>::is_vectorpack>
     {
     };
     /// \endcond

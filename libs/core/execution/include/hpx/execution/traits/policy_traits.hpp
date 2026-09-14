@@ -17,10 +17,11 @@ namespace hpx::detail {
     ///
     /// A new execution policy is made known to the is_execution_policy,
     /// is_parallel_execution_policy, is_sequenced_execution_policy,
-    /// is_unsequenced_execution_policy, is_async_execution_policy, and
-    /// is_rebound_execution_policy customization points by specializing
-    /// policy_traits for that policy's type and setting the members below,
-    /// instead of specializing each of those traits individually.
+    /// is_unsequenced_execution_policy, is_async_execution_policy,
+    /// is_rebound_execution_policy, and is_vectorpack_execution_policy
+    /// customization points by specializing policy_traits for that policy's
+    /// type and setting the members below, instead of specializing each of
+    /// those traits individually.
     ///
     /// The primary template below is the fallback used for any type that is
     /// not a recognized execution policy; every member defaults to false.
@@ -53,5 +54,9 @@ namespace hpx::detail {
         /// Whether Policy runs its algorithm asynchronously, returning a
         /// future rather than blocking the calling thread.
         static constexpr bool is_async = false;
+
+        /// Whether Policy operates on vector packs rather than individual
+        /// elements.
+        static constexpr bool is_vectorpack = false;
     };
 }    // namespace hpx::detail

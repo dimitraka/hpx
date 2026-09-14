@@ -501,100 +501,81 @@ namespace hpx::thrust {
 
 namespace hpx::detail {
 
-    HPX_CXX_CORE_EXPORT template <typename Executor, typename Parameters>
-    struct is_rebound_execution_policy<
-        hpx::thrust::thrust_policy_shim<Executor, Parameters>> : std::true_type
+    // Register each thrust execution policy defined above with
+    // policy_traits, replacing what used to be a separate specialization of
+    // is_execution_policy, is_parallel_execution_policy,
+    // is_async_execution_policy, and is_rebound_execution_policy for each of
+    // the policies below.
+    template <>
+    struct policy_traits<hpx::thrust::thrust_policy>
     {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Executor, typename Parameters>
-    struct is_rebound_execution_policy<
+    template <typename Executor, typename Parameters>
+    struct policy_traits<hpx::thrust::thrust_policy_shim<Executor, Parameters>>
+    {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = true;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
+    };
+
+    template <>
+    struct policy_traits<hpx::thrust::thrust_host_policy>
+    {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
+    };
+
+    template <>
+    struct policy_traits<hpx::thrust::thrust_device_policy>
+    {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = false;
+        static constexpr bool is_vectorpack = false;
+    };
+
+    template <>
+    struct policy_traits<hpx::thrust::thrust_task_policy>
+    {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = false;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = true;
+        static constexpr bool is_vectorpack = false;
+    };
+
+    template <typename Executor, typename Parameters>
+    struct policy_traits<
         hpx::thrust::thrust_task_policy_shim<Executor, Parameters>>
-      : std::true_type
     {
-    };
-
-    template <>
-    struct is_execution_policy<hpx::thrust::thrust_policy> : std::true_type
-    {
-    };
-
-    HPX_CXX_CORE_EXPORT template <typename Executor, typename Parameters>
-    struct is_execution_policy<
-        hpx::thrust::thrust_policy_shim<Executor, Parameters>> : std::true_type
-    {
-    };
-
-    template <>
-    struct is_execution_policy<hpx::thrust::thrust_host_policy> : std::true_type
-    {
-    };
-
-    template <>
-    struct is_execution_policy<hpx::thrust::thrust_device_policy>
-      : std::true_type
-    {
-    };
-
-    template <>
-    struct is_execution_policy<hpx::thrust::thrust_task_policy> : std::true_type
-    {
-    };
-
-    HPX_CXX_CORE_EXPORT template <typename Executor, typename Parameters>
-    struct is_execution_policy<
-        hpx::thrust::thrust_task_policy_shim<Executor, Parameters>>
-      : std::true_type
-    {
-    };
-
-    template <>
-    struct is_parallel_execution_policy<hpx::thrust::thrust_policy>
-      : std::true_type
-    {
-    };
-
-    HPX_CXX_CORE_EXPORT template <typename Executor, typename Parameters>
-    struct is_parallel_execution_policy<
-        hpx::thrust::thrust_policy_shim<Executor, Parameters>> : std::true_type
-    {
-    };
-
-    template <>
-    struct is_parallel_execution_policy<hpx::thrust::thrust_host_policy>
-      : std::true_type
-    {
-    };
-
-    template <>
-    struct is_parallel_execution_policy<hpx::thrust::thrust_device_policy>
-      : std::true_type
-    {
-    };
-
-    template <>
-    struct is_parallel_execution_policy<hpx::thrust::thrust_task_policy>
-      : std::true_type
-    {
-    };
-
-    HPX_CXX_CORE_EXPORT template <typename Executor, typename Parameters>
-    struct is_parallel_execution_policy<
-        hpx::thrust::thrust_task_policy_shim<Executor, Parameters>>
-      : std::true_type
-    {
-    };
-
-    template <>
-    struct is_async_execution_policy<hpx::thrust::thrust_task_policy>
-      : std::true_type
-    {
-    };
-
-    HPX_CXX_CORE_EXPORT template <typename Executor, typename Parameters>
-    struct is_async_execution_policy<
-        hpx::thrust::thrust_task_policy_shim<Executor, Parameters>>
-      : std::true_type
-    {
+        static constexpr bool is_policy = true;
+        static constexpr bool is_rebound = true;
+        static constexpr bool is_parallel = true;
+        static constexpr bool is_sequenced = false;
+        static constexpr bool is_unsequenced = false;
+        static constexpr bool is_async = true;
+        static constexpr bool is_vectorpack = false;
     };
 }    // namespace hpx::detail
