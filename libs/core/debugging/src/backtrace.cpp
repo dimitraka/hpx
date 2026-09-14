@@ -370,10 +370,23 @@ namespace hpx::util::stack_trace {
             if (hProcess == nullptr)
             {
                 hProcess = GetCurrentProcess();
-                SymSetOptions(SYMOPT_DEFERRED_LOADS);
+
+                // OR our preference in rather than clobbering: if Tracy
+                // (or anything else) initialised the handler first, its
+                // options are already set and we do not want to reset
+                // them here.
+                SymSetOptions(SymGetOptions() | SYMOPT_DEFERRED_LOADS);
 
                 if (SymInitialize(hProcess, nullptr, TRUE))
                 {
+                    syms_ready = true;
+                }
+                else if (GetLastError() == ERROR_INVALID_PARAMETER)
+                {
+                    // Someone else (typically Tracy's SymbolWorker) has
+                    // already initialised DbgHelp for this process. The
+                    // handler is usable; we just do not own its lifetime
+                    // and therefore never call SymCleanup.
                     syms_ready = true;
                 }
             }
