@@ -94,6 +94,19 @@ elseif(NOT TARGET tracy::tracy)
   # is unset or OFF) is the supported configuration.
   if(WIN32)
     target_compile_definitions(TracyClient PUBLIC TRACY_DBGHELP_LOCK=HpxDbgHelp)
+    # A shared TracyClient's own link step cannot resolve HpxDbgHelp*, since
+    # hpx_debugging depends on TracyClient rather than the other way round. LTO
+    # makes TracyClient an OBJECT library (no per-library link step), and
+    # TRACY_STATIC=ON forces it static, so warn only when neither escape
+    # applies.
+    if(BUILD_SHARED_LIBS
+       AND NOT TRACY_STATIC
+       AND NOT (CMAKE_INTERPROCEDURAL_OPTIMIZATION OR TRACY_LTO)
+    )
+      hpx_warn(
+        "BUILD_SHARED_LIBS=ON on Windows will build TracyClient as a shared library whose link step cannot resolve HpxDbgHelp*. Set TRACY_STATIC=ON, enable LTO, or leave BUILD_SHARED_LIBS unset."
+      )
+    endif()
   endif()
   target_compile_features(TracyClient PRIVATE cxx_std_${HPX_CXX_STANDARD})
 
