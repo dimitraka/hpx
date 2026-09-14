@@ -14,6 +14,7 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/executors.hpp>
 #include <hpx/modules/functional.hpp>
+#include <hpx/modules/lock_registration.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threadmanager.hpp>
@@ -454,6 +455,7 @@ namespace hpx::compute::host {
                 "called from an HPX thread");
 
             std::unique_lock<hpx::mutex> lk(init_mutex);
+            [[maybe_unused]] hpx::util::ignore_while_checking il(&lk);
 
             threads::hwloc_bitmap_ptr const bitmap =
                 threads::get_thread_manager().get_pool_numa_bitmap(
