@@ -47,7 +47,8 @@ function(write_ctest_submission_results)
   file(WRITE "jenkins-hpx-${CTEST_BUILD_CONFIGURATION_NAME}-cdash-build-id.txt"
        "${CTEST_BUILD_ID}"
   )
-  file(WRITE "jenkins-hpx-${CTEST_BUILD_CONFIGURATION_NAME}-cdash-submission.txt"
+  file(WRITE
+       "jenkins-hpx-${CTEST_BUILD_CONFIGURATION_NAME}-cdash-submission.txt"
        ${ctest_submission_result}
   )
 endfunction()
