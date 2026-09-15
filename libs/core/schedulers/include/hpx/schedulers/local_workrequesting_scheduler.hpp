@@ -103,7 +103,7 @@ namespace hpx::threads::policies {
         ////////////////////////////////////////////////////////////////////////
         inline unsigned int random_seed() noexcept
         {
-            static std::random_device rd;
+            std::random_device rd;
             return rd();
         }
 
@@ -320,7 +320,6 @@ namespace hpx::threads::policies {
           , data_(init.num_queues_)
           , low_priority_queue_(thread_queue_init_)
           , curr_queue_(0)
-          , gen_(detail::random_seed())
           , affinity_data_(init.affinity_data_)
           , num_queues_(init.num_queues_)
           , num_high_priority_queues_(init.num_high_priority_queues_)
@@ -1482,6 +1481,8 @@ namespace hpx::threads::policies {
         // return a random victim for the current stealing operation
         std::size_t random_victim(steal_request const& req) noexcept
         {
+            // Victim selection runs concurrently on the pool's workers.
+            static thread_local std::mt19937 gen(detail::random_seed());
             std::size_t result;
 
             {
@@ -1493,7 +1494,7 @@ namespace hpx::threads::policies {
                 int attempts = 0;
                 do
                 {
-                    result = uniform(gen_);
+                    result = uniform(gen);
                     if (result != req.num_thread_ &&
                         !test(req.victims_, result))
                     {
@@ -1510,7 +1511,7 @@ namespace hpx::threads::policies {
                     num_queues_ - count(req.victims_) - 1));
 
             // generate one more random number
-            std::size_t selected_victim = uniform(gen_);
+            std::size_t selected_victim = uniform(gen);
             for (std::size_t i = 0; i != num_queues_; ++i)
             {
                 if (!test(req.victims_, i))
@@ -1879,8 +1880,6 @@ namespace hpx::threads::policies {
         thread_queue_type low_priority_queue_;
 
         std::atomic<std::size_t> curr_queue_;
-
-        std::mt19937 gen_;
 
         detail::affinity_data const& affinity_data_;
         std::size_t const num_queues_;
