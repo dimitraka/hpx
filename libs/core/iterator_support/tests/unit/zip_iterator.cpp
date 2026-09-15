@@ -455,7 +455,7 @@ int main(void)
 
     auto zip_begin =
         hpx::util::zip_iterator(hpx::make_tuple(keys.begin(), vals.begin()));
-    auto zip_end =
+    [[maybe_unused]] auto zip_end =
         hpx::util::zip_iterator(hpx::make_tuple(keys.end(), vals.end()));
 
     // hpx::get<I> through the proxy returned by operator[] (non-const)
@@ -511,8 +511,6 @@ int main(void)
         HPX_TEST(
             hpx::get<1>(t_flags) == 'z');    // vals[0] was set to 'z' above
     }
-
-    (void) zip_end;
 
     return hpx::util::report_errors();
 }

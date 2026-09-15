@@ -15,9 +15,9 @@
 
 #include <hpx/config.hpp>
 
-#include <hpx/datastructures/traits/is_tuple_like.hpp>
 #include <hpx/iterator_support/traits/is_iterator.hpp>
 #include <hpx/modules/concepts.hpp>
+#include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/type_support.hpp>
 
 #include <cstddef>
@@ -241,32 +241,28 @@ namespace hpx::util {
         // (operator[]) can safely be made transparent to hpx::get<I>: only
         // then do the tuple elements outlive the temporary that the proxy
         // converts to.
-        template <typename T, std::size_t N, typename Enable = void>
-        struct all_elements_are_lvalue_refs : std::false_type
+        template <typename T, std::size_t N>
+        struct all_elements_are_lvalue_refs
+          : std::integral_constant<bool,
+                std::is_lvalue_reference_v<tuple_element_t<N - 1, T>> &&
+                    all_elements_are_lvalue_refs<T, N - 1>::value>
         {
         };
 
-        // an empty tuple trivially has only lvalue reference elements
+        // an empty tuple trivially has only lvalue reference elements; this
+        // specialization also terminates the recursion above (for N == 0 it
+        // is selected instead of the primary template, so tuple_element is
+        // never instantiated with an invalid index)
         template <typename T>
         struct all_elements_are_lvalue_refs<T, 0> : std::true_type
         {
         };
 
-        // N > 0: check the N-1-th element and recurse. The element access is
-        // deliberately inside the definition (not the enable_if condition)
-        // so that N == 0 never instantiates tuple_element with an invalid
-        // index.
-        template <typename T, std::size_t N>
-        struct all_elements_are_lvalue_refs<T, N, std::enable_if_t<(N > 0)>>
-          : std::integral_constant<bool,
-                std::is_lvalue_reference_v<
-                    typename tuple_element<N - 1, T>::type> &&
-                    all_elements_are_lvalue_refs<T, N - 1>::value>
-        {
-        };
-
+        // a type that is not tuple-like is not transparent to hpx::get<I> at
+        // all; a plain lvalue reference trivially consists of only lvalue
+        // references
         template <typename T, typename Enable = void>
-        struct all_lvalue_references : std::false_type
+        struct all_lvalue_references : std::is_lvalue_reference<T>
         {
         };
 
