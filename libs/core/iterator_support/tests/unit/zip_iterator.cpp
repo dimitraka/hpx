@@ -527,5 +527,48 @@ int main(void)
             hpx::get<1>(t_flags) == 'z');    // vals[0] was set to 'z' above
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // tuple_size: the proxy is genuinely tuple-like when its reference is
+    // (same gate as the tuple_element specialization above)
+    ///////////////////////////////////////////////////////////////////////////
+    static_assert(
+        hpx::traits::is_tuple_like_v<std::decay_t<decltype(zip_begin[0])>>,
+        "operator_brackets_proxy is tuple-like when the underlying reference "
+        "is tuple-like and all of its elements are lvalue references");
+    static_assert(hpx::tuple_size_v<std::decay_t<decltype(zip_begin[0])>> == 2,
+        "the proxy has the same number of elements as its reference");
+
+    // and hpx::get<I> keeps working through it
+    HPX_TEST(9 == hpx::get<0>(zip_begin[0]));
+    HPX_TEST('z' == hpx::get<1>(zip_begin[0]));
+
+    ///////////////////////////////////////////////////////////////////////////
+    // the traits when T is a reference itself: hpx::tuple_size is not defined
+    // for reference types, so a reference is never tuple-like and the proxy
+    // specializations (which require is_tuple_like_v) can never engage for
+    // one. all_lvalue_references still gives the semantically right answer:
+    // the elements reached through a reference to a tuple of lvalue
+    // references are themselves lvalue references.
+    ///////////////////////////////////////////////////////////////////////////
+    static_assert(!hpx::traits::is_tuple_like_v<hpx::tuple<int&, char&>&>,
+        "a reference type is not tuple-like");
+    static_assert(
+        hpx::util::detail::all_lvalue_references_v<hpx::tuple<int&, char&>&>,
+        "elements reached through a reference to a tuple of lvalue references "
+        "are lvalue references");
+    static_assert(hpx::util::detail::all_lvalue_references_v<
+                      hpx::tuple<int&, char&> const&>,
+        "const references to such tuples behave the same");
+
+    // mixed tuples must be detected no matter where the non-reference element
+    // sits (std::conjunction stops instantiating the recursion as soon as one
+    // element fails the check)
+    static_assert(
+        !hpx::util::detail::all_lvalue_references_v<hpx::tuple<int&, char>>,
+        "a tuple with a non-reference element is not all-lvalue-references");
+    static_assert(
+        !hpx::util::detail::all_lvalue_references_v<hpx::tuple<char, int&>>,
+        "the position of the non-reference element does not matter");
+
     return hpx::util::report_errors();
 }
