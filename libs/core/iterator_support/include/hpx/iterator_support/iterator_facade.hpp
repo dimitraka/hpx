@@ -236,6 +236,51 @@ namespace hpx::util {
         ////////////////////////////////////////////////////////////////////////
         // Implementation for random access iterators
 
+        // A type trait to check whether all elements of a tuple-like type
+        // are lvalue references. Used to decide whether indexing an iterator
+        // (operator[]) can safely be made transparent to hpx::get<I>: only
+        // then do the tuple elements outlive the temporary that the proxy
+        // converts to.
+        template <typename T, std::size_t N, typename Enable = void>
+        struct all_elements_are_lvalue_refs : std::false_type
+        {
+        };
+
+        // an empty tuple trivially has only lvalue reference elements
+        template <typename T>
+        struct all_elements_are_lvalue_refs<T, 0> : std::true_type
+        {
+        };
+
+        // N > 0: check the N-1-th element and recurse. The element access is
+        // deliberately inside the definition (not the enable_if condition)
+        // so that N == 0 never instantiates tuple_element with an invalid
+        // index.
+        template <typename T, std::size_t N>
+        struct all_elements_are_lvalue_refs<T, N, std::enable_if_t<(N > 0)>>
+          : std::integral_constant<bool,
+                std::is_lvalue_reference_v<
+                    typename tuple_element<N - 1, T>::type> &&
+                    all_elements_are_lvalue_refs<T, N - 1>::value>
+        {
+        };
+
+        template <typename T, typename Enable = void>
+        struct all_lvalue_references : std::false_type
+        {
+        };
+
+        template <typename T>
+        struct all_lvalue_references<T,
+            std::enable_if_t<traits::is_tuple_like_v<T>>>
+          : all_elements_are_lvalue_refs<T, tuple_size<T>::value>
+        {
+        };
+
+        template <typename T>
+        inline constexpr bool all_lvalue_references_v =
+            all_lvalue_references<T>::value;
+
         // A proxy return type for operator[], needed to deal with iterators
         // that may invalidate references upon destruction. Consider the
         // temporary iterator in *(a + n)
@@ -688,8 +733,9 @@ namespace hpx::util {
     HPX_HOST_DEVICE constexpr std::enable_if_t<
         std::is_same_v<typename Derived::iterator_category,
             std::random_access_iterator_tag>,
-        Derived> operator+(iterator_facade<Derived, T, Category, Reference,
-                               Distance, Pointer> const& it,
+        Derived>
+    operator+(iterator_facade<Derived, T, Category, Reference, Distance,
+                  Pointer> const& it,
         typename Derived::difference_type
             n) noexcept(noexcept(std::declval<Derived>() +=
         std::declval<typename Derived::difference_type>()))
@@ -717,20 +763,27 @@ namespace hpx::util {
 
 ///////////////////////////////////////////////////////////////////////////
 // Make hpx::get<I> work on operator_brackets_proxy when the underlying
-// iterator's reference is tuple-like (e.g. zip_iterator). This keeps the
-// proxy (preserving its lifetime guarantees) while making it transparent
-// to projections like hpx::parallel::detail::extract_key that use
-// hpx::get<I>. For iterators whose reference is not tuple-like (e.g.
-// std::vector<bool>::iterator) the specializations below are simply not
+// iterator's reference is a tuple of lvalue references (e.g.
+// zip_iterator). This keeps the proxy (preserving its lifetime
+// guarantees) while making it transparent to projections like
+// hpx::parallel::detail::extract_key that use hpx::get<I>. For
+// iterators whose reference is not tuple-like (e.g.
+// std::vector<bool>::iterator) or whose tuple elements are not plain
+// lvalue references (which would dangle when bound to the temporary
+// the proxy converts to), the specializations below are simply not
 // viable, leaving the proxy opaque as before.
 namespace hpx {
     template <std::size_t I, typename Iterator>
     struct tuple_element<I, util::detail::operator_brackets_proxy<Iterator>,
-        std::enable_if_t<traits::is_tuple_like_v<typename Iterator::reference>>>
+        std::enable_if_t<
+            traits::is_tuple_like_v<typename Iterator::reference> &&
+            util::detail::all_lvalue_references_v<
+                typename Iterator::reference>>>
     {
-        // The reference of the proxy is tuple-like, element access simply
-        // delegates to it. Note that the proxy converts to its reference
-        // implicitly.
+        // The reference of the proxy is a tuple of lvalue references, so the
+        // elements outlive the temporary the proxy converts to. Element
+        // access simply delegates to it. Note that the proxy converts to its
+        // reference implicitly.
         using type =
             typename tuple_element<I, typename Iterator::reference>::type;
 

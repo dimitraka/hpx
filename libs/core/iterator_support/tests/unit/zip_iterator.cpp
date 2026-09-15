@@ -489,6 +489,17 @@ int main(void)
             "operator_brackets_proxy should not be tuple-like when the "
             "underlying reference is not tuple-like");
 
+        // the proxy is transparent to hpx::get<I> only if all elements of
+        // the underlying reference tuple are lvalue references (otherwise
+        // the elements would refer into the temporary the proxy converts
+        // to and would dangle)
+        static_assert(
+            hpx::util::detail::all_lvalue_references_v<hpx::tuple<int&, char&>>,
+            "a tuple of lvalue references is all-lvalue-references");
+        static_assert(!hpx::util::detail::all_lvalue_references_v<
+                          hpx::tuple<std::vector<bool>::reference, char&>>,
+            "a tuple containing a proxy element is not all-lvalue-references");
+
         // the proxy converts to its reference which is a tuple here since
         // zip_iterator always exposes a tuple of references; the point of the
         // test above is that hpx::get works only through that conversion, not
