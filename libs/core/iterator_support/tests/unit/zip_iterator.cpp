@@ -473,9 +473,10 @@ int main(void)
     // the lvalue members and forward the result (which is always a reference
     // into the underlying sequence, never into the proxy or the temporary it
     // converts to), so no separate rvalue members are needed
-    auto proxy = zip_begin[3];
-    HPX_TEST(1 == hpx::get<0>(std::move(proxy)));
-    HPX_TEST('a' == hpx::get<1>(std::move(proxy)));
+    auto proxy_key = zip_begin[3];
+    auto proxy_val = zip_begin[3];
+    HPX_TEST(1 == hpx::get<0>(std::move(proxy_key)));
+    HPX_TEST('a' == hpx::get<1>(std::move(proxy_val)));
 
     // const proxies: the const& member and the generic hpx::get<I>(Tuple
     // const&&) overload delegate to the const& member
