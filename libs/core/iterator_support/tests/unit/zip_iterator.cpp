@@ -441,5 +441,67 @@ int main(void)
     HPX_TEST(bBigItIsBidirectionalIterator && !bBigItIsRandomAccessIterator &&
         bAllVectsIsRandomAccessIterator);
 
+    /////////////////////////////////////////////////////////////////////////////
+    //
+    // hpx::get<I> on operator[] of a zip_iterator (operator_brackets_proxy)
+    // Regression test for #7557: projections rely on hpx::get<I> being
+    // applicable to the result of iterator indexing (as done by
+    // libc++'s std::sort implementation).
+    //
+    /////////////////////////////////////////////////////////////////////////////
+
+    std::vector<int> keys = {4, 2, 7, 1};
+    std::vector<char> vals = {'d', 'b', 'g', 'a'};
+
+    auto zip_begin =
+        hpx::util::zip_iterator(hpx::make_tuple(keys.begin(), vals.begin()));
+    auto zip_end =
+        hpx::util::zip_iterator(hpx::make_tuple(keys.end(), vals.end()));
+
+    // hpx::get<I> through the proxy returned by operator[] (non-const)
+    HPX_TEST(4 == hpx::get<0>(zip_begin[0]));
+    HPX_TEST('d' == hpx::get<1>(zip_begin[0]));
+    HPX_TEST(2 == hpx::get<0>(zip_begin[1]));
+    HPX_TEST('b' == hpx::get<1>(zip_begin[1]));
+
+    // same through a const zip_iterator (const proxy)
+    auto const& zip_begin_const = zip_begin;
+    HPX_TEST(7 == hpx::get<0>(zip_begin_const[2]));
+    HPX_TEST('g' == hpx::get<1>(zip_begin_const[2]));
+
+    // writing through the proxy must still work
+    zip_begin[0] = hpx::make_tuple(9, 'z');
+    HPX_TEST(9 == keys[0] && 'z' == vals[0]);
+
+    // and the proxy must still convert to the underlying tuple of references
+    hpx::tuple<int&, char&> t = zip_begin[1];
+    HPX_TEST(2 == hpx::get<0>(t) && 'b' == hpx::get<1>(t));
+
+    // verify that the proxy itself is not tuple-like for non-tuple-like
+    // references (e.g. std::vector<bool>::iterator) - hpx::get must not apply
+    {
+        std::vector<bool> flags = {true, false, true};
+        auto zip_flags = hpx::util::zip_iterator(
+            hpx::make_tuple(flags.begin(), vals.begin()));
+
+        static_assert(
+            !hpx::traits::is_tuple_like_v<std::decay_t<decltype(zip_flags[0])>>,
+            "operator_brackets_proxy should not be tuple-like when the "
+            "underlying reference is not tuple-like");
+
+        // the proxy converts to its reference which is a tuple here since
+        // zip_iterator always exposes a tuple of references; the point of the
+        // test above is that hpx::get works only through that conversion, not
+        // directly on the proxy
+        auto t_flags =
+            static_cast<hpx::tuple<std::vector<bool>::reference, char&>>(
+                zip_flags[0]);
+        HPX_TEST(hpx::get<0>(t_flags) == true);
+        HPX_TEST(
+            hpx::get<1>(t_flags) == 'z');    // vals[0] was set to 'z' above
+    }
+
+    (void) zip_end;
+
     return hpx::util::report_errors();
 }

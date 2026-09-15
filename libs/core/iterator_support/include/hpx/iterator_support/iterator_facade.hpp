@@ -15,6 +15,7 @@
 
 #include <hpx/config.hpp>
 
+#include <hpx/datastructures/traits/is_tuple_like.hpp>
 #include <hpx/iterator_support/traits/is_iterator.hpp>
 #include <hpx/modules/concepts.hpp>
 #include <hpx/modules/type_support.hpp>
@@ -687,9 +688,8 @@ namespace hpx::util {
     HPX_HOST_DEVICE constexpr std::enable_if_t<
         std::is_same_v<typename Derived::iterator_category,
             std::random_access_iterator_tag>,
-        Derived>
-    operator+(iterator_facade<Derived, T, Category, Reference, Distance,
-                  Pointer> const& it,
+        Derived> operator+(iterator_facade<Derived, T, Category, Reference,
+                               Distance, Pointer> const& it,
         typename Derived::difference_type
             n) noexcept(noexcept(std::declval<Derived>() +=
         std::declval<typename Derived::difference_type>()))
@@ -714,3 +714,38 @@ namespace hpx::util {
         return tmp += n;
     }
 }    // namespace hpx::util
+
+///////////////////////////////////////////////////////////////////////////
+// Make hpx::get<I> work on operator_brackets_proxy when the underlying
+// iterator's reference is tuple-like (e.g. zip_iterator). This keeps the
+// proxy (preserving its lifetime guarantees) while making it transparent
+// to projections like hpx::parallel::detail::extract_key that use
+// hpx::get<I>. For iterators whose reference is not tuple-like (e.g.
+// std::vector<bool>::iterator) the specializations below are simply not
+// viable, leaving the proxy opaque as before.
+namespace hpx {
+    template <std::size_t I, typename Iterator>
+    struct tuple_element<I, util::detail::operator_brackets_proxy<Iterator>,
+        std::enable_if_t<traits::is_tuple_like_v<typename Iterator::reference>>>
+    {
+        // The reference of the proxy is tuple-like, element access simply
+        // delegates to it. Note that the proxy converts to its reference
+        // implicitly.
+        using type =
+            typename tuple_element<I, typename Iterator::reference>::type;
+
+        static constexpr HPX_HOST_DEVICE HPX_FORCEINLINE type&
+        get(util::detail::operator_brackets_proxy<Iterator>& p) noexcept(
+            noexcept(hpx::get<I>(static_cast<typename Iterator::reference>(p))))
+        {
+            return hpx::get<I>(static_cast<typename Iterator::reference>(p));
+        }
+
+        static constexpr HPX_HOST_DEVICE HPX_FORCEINLINE type const&
+        get(util::detail::operator_brackets_proxy<Iterator> const& p) noexcept(
+            noexcept(hpx::get<I>(static_cast<typename Iterator::reference>(p))))
+        {
+            return hpx::get<I>(static_cast<typename Iterator::reference>(p));
+        }
+    };
+}    // namespace hpx
