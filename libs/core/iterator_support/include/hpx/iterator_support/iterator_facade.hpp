@@ -253,7 +253,10 @@ namespace hpx::util {
         // specialization also terminates the recursion above (for N == 0 it
         // is selected instead of the primary template, so tuple_element is
         // never instantiated with an invalid index)
-        HPX_CXX_CORE_EXPORT template <typename T>
+        // note: no HPX_CXX_CORE_EXPORT here - export declarations are not
+        // allowed on partial specializations (C7760 on MSVC), see range.hpp
+        // for the same pattern
+        template <typename T>
         struct all_elements_are_lvalue_refs<T, 0> : std::true_type
         {
         };
@@ -266,7 +269,7 @@ namespace hpx::util {
         {
         };
 
-        HPX_CXX_CORE_EXPORT template <typename T>
+        template <typename T>
         struct all_lvalue_references<T,
             std::enable_if_t<traits::is_tuple_like_v<T>>>
           : all_elements_are_lvalue_refs<T, tuple_size_v<T>>
