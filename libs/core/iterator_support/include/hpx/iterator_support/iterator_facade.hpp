@@ -241,7 +241,7 @@ namespace hpx::util {
         // (operator[]) can safely be made transparent to hpx::get<I>: only
         // then do the tuple elements outlive the temporary that the proxy
         // converts to.
-        template <typename T, std::size_t N>
+        HPX_CXX_CORE_EXPORT template <typename T, std::size_t N>
         struct all_elements_are_lvalue_refs
           : std::integral_constant<bool,
                 std::is_lvalue_reference_v<tuple_element_t<N - 1, T>> &&
@@ -253,7 +253,7 @@ namespace hpx::util {
         // specialization also terminates the recursion above (for N == 0 it
         // is selected instead of the primary template, so tuple_element is
         // never instantiated with an invalid index)
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         struct all_elements_are_lvalue_refs<T, 0> : std::true_type
         {
         };
@@ -261,19 +261,19 @@ namespace hpx::util {
         // a type that is not tuple-like is not transparent to hpx::get<I> at
         // all; a plain lvalue reference trivially consists of only lvalue
         // references
-        template <typename T, typename Enable = void>
+        HPX_CXX_CORE_EXPORT template <typename T, typename Enable = void>
         struct all_lvalue_references : std::is_lvalue_reference<T>
         {
         };
 
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         struct all_lvalue_references<T,
             std::enable_if_t<traits::is_tuple_like_v<T>>>
-          : all_elements_are_lvalue_refs<T, tuple_size<T>::value>
+          : all_elements_are_lvalue_refs<T, tuple_size_v<T>>
         {
         };
 
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         inline constexpr bool all_lvalue_references_v =
             all_lvalue_references<T>::value;
 
@@ -780,21 +780,26 @@ namespace hpx {
         // elements outlive the temporary the proxy converts to. Element
         // access simply delegates to it. Note that the proxy converts to its
         // reference implicitly.
-        using type =
-            typename tuple_element<I, typename Iterator::reference>::type;
+        using type = tuple_element_t<I, typename Iterator::reference>;
 
+        // There are no rvalue-reference overloads on purpose: operator[]
+        // returns a prvalue, and rvalue proxies are handled by the generic
+        // hpx::get<I>(Tuple&&) overloads, which delegate to the members below
+        // and forward the result. The returned reference always refers to an
+        // element of the underlying sequence, never into the temporary the
+        // proxy converts to.
         static constexpr HPX_HOST_DEVICE HPX_FORCEINLINE type&
         get(util::detail::operator_brackets_proxy<Iterator>& p) noexcept(
-            noexcept(hpx::get<I>(static_cast<typename Iterator::reference>(p))))
+            noexcept(hpx::get<I>(static_cast<Iterator::reference>(p))))
         {
-            return hpx::get<I>(static_cast<typename Iterator::reference>(p));
+            return hpx::get<I>(static_cast<Iterator::reference>(p));
         }
 
         static constexpr HPX_HOST_DEVICE HPX_FORCEINLINE type const&
         get(util::detail::operator_brackets_proxy<Iterator> const& p) noexcept(
-            noexcept(hpx::get<I>(static_cast<typename Iterator::reference>(p))))
+            noexcept(hpx::get<I>(static_cast<Iterator::reference>(p))))
         {
-            return hpx::get<I>(static_cast<typename Iterator::reference>(p));
+            return hpx::get<I>(static_cast<Iterator::reference>(p));
         }
     };
 }    // namespace hpx

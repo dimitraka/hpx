@@ -469,6 +469,20 @@ int main(void)
     HPX_TEST(7 == hpx::get<0>(zip_begin_const[2]));
     HPX_TEST('g' == hpx::get<1>(zip_begin_const[2]));
 
+    // rvalue proxies: the generic hpx::get<I>(Tuple&&) overloads delegate to
+    // the lvalue members and forward the result (which is always a reference
+    // into the underlying sequence, never into the proxy or the temporary it
+    // converts to), so no separate rvalue members are needed
+    auto proxy = zip_begin[3];
+    HPX_TEST(1 == hpx::get<0>(std::move(proxy)));
+    HPX_TEST('a' == hpx::get<1>(std::move(proxy)));
+
+    // const proxies: the const& member and the generic hpx::get<I>(Tuple
+    // const&&) overload delegate to the const& member
+    auto const& proxy_const = zip_begin[3];
+    HPX_TEST(1 == hpx::get<0>(proxy_const));
+    HPX_TEST(1 == hpx::get<0>(std::move(proxy_const)));
+
     // writing through the proxy must still work
     zip_begin[0] = hpx::make_tuple(9, 'z');
     HPX_TEST(9 == keys[0] && 'z' == vals[0]);
