@@ -164,7 +164,7 @@ namespace hpx::threads::policies {
                 lcos::local::channel_mode::dont_support_close>;
 
         ////////////////////////////////////////////////////////////////////////
-        struct workrequesting_steal_request
+        HPX_CXX_CORE_EXPORT struct workrequesting_steal_request
         {
             enum class state : std::uint16_t
             {
