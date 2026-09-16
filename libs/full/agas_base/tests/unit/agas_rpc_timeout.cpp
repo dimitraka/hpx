@@ -4,18 +4,15 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#include <hpx/agas_base/agas_fwd.hpp>
 #include <hpx/init.hpp>
+#include <hpx/modules/agas_base.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/modules/timing.hpp>
 
-#if defined(HPX_HAVE_NETWORKING)
-#include <hpx/agas_base/detail/hosted_locality_namespace.hpp>
-#endif
-
 #include <chrono>
 #include <cstdint>
+#include <string>
 #include <thread>
 
 int hpx_main()
@@ -116,16 +113,25 @@ int main(int argc, char* argv[])
             // Under old code, this call spun infinitely in `while (!endpoints_future.is_ready())`.
             // Under fixed code, it proceeds to wait_or_handle_timeout(...) and throws future_wait_timed_out.
             bool caught_timeout = false;
+            hpx::chrono::high_resolution_timer timer;
             try
             {
                 hosted_ns.resolve_locality(hpx::naming::gid_type{});
             }
             catch (hpx::exception const& e)
             {
+                auto const elapsed = timer.elapsed();
                 if (e.get_error() == hpx::error::future_wait_timed_out)
                 {
                     caught_timeout = true;
                 }
+                std::string const what = e.what();
+                HPX_TEST(what.find("future.wait_for timed out") !=
+                    std::string::npos);
+                HPX_TEST_EQ(hpx::get_error_function_name(e),
+                    std::string("hosted_locality_namespace::resolve_locality"));
+                // Ensure it actually waited for the configured timeout duration
+                HPX_TEST(elapsed >= 0.05);
             }
             HPX_TEST(caught_timeout);
         });
