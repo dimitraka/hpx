@@ -283,6 +283,18 @@ namespace hpx::util {
         inline constexpr bool all_lvalue_references_v =
             all_lvalue_references<T>::value;
 
+        // Shared gate for the hpx::tuple_size/hpx::tuple_element
+        // specializations of operator_brackets_proxy (see below): the proxy is
+        // tuple-like only if the iterator's reference is tuple-like and all of
+        // its elements are lvalue references. This is an alias of
+        // std::enable_if_t so that it can be used directly in the argument
+        // pattern of the partial specializations, which keeps it
+        // SFINAE-friendly.
+        template <typename Iterator>
+        using enable_if_proxy_tuple_like = std::enable_if_t<
+            traits::is_tuple_like_v<typename Iterator::reference> &&
+            all_lvalue_references_v<typename Iterator::reference>>;
+
         // A proxy return type for operator[], needed to deal with iterators
         // that may invalidate references upon destruction. Consider the
         // temporary iterator in *(a + n)
@@ -315,18 +327,13 @@ namespace hpx::util {
             }
 
             // The hpx::tuple_element/get<I> specializations below (for
-            // tuple-like references) must not go through operator reference()
-            // - converting to the reference type would invoke hpx::tuple's
-            // tuple-like constructor (made viable by the tuple_size
-            // specialization below), which itself calls hpx::get<I>, leading
-            // to infinite mutual recursion. The name must be qualified: an
-            // unqualified friend would declare (and befriend) a distinct
-            // hpx::util::detail::tuple_element instead. The parameter list
-            // must match hpx::tuple_element's primary template exactly
-            // (including the trailing Enable) for the friendship to apply to
-            // the partial specializations.
-            template <std::size_t I, typename Iter, typename Enable>
-            friend struct hpx::tuple_element;
+            // tuple-like references) call the conversion function explicitly
+            // (p.operator reference()) instead of casting the proxy to its
+            // reference type: with tuple_size specialized, a cast could
+            // resolve to hpx::tuple's tuple-like constructor (which itself
+            // calls hpx::get<I>), leading to infinite mutual recursion.
+            // Calling the conversion function directly bypasses constructor
+            // overload resolution, so no friend declaration is needed.
 
         private:
             Iterator iter_;
@@ -802,25 +809,18 @@ namespace hpx {
     // for the same pattern
     template <typename Iterator>
     struct tuple_size<util::detail::operator_brackets_proxy<Iterator>,
-        std::enable_if_t<
-            traits::is_tuple_like_v<typename Iterator::reference> &&
-            util::detail::all_lvalue_references_v<
-                typename Iterator::reference>>>
+        util::detail::enable_if_proxy_tuple_like<Iterator>>
       : tuple_size<typename Iterator::reference>
     {
     };
 
     template <std::size_t I, typename Iterator>
     struct tuple_element<I, util::detail::operator_brackets_proxy<Iterator>,
-        std::enable_if_t<
-            traits::is_tuple_like_v<typename Iterator::reference> &&
-            util::detail::all_lvalue_references_v<
-                typename Iterator::reference>>>
+        util::detail::enable_if_proxy_tuple_like<Iterator>>
     {
         // The reference of the proxy is a tuple of lvalue references, so the
         // elements outlive the temporary the proxy converts to. Element
-        // access simply delegates to it. Note that the proxy converts to its
-        // reference implicitly.
+        // access simply delegates to it.
         using type = tuple_element_t<I, typename Iterator::reference>;
 
         // There are no rvalue-reference overloads on purpose: operator[]
@@ -828,24 +828,24 @@ namespace hpx {
         // hpx::get<I>(Tuple&&) overloads, which delegate to the members below
         // and forward the result. The returned reference always refers to an
         // element of the underlying sequence, never into a temporary. Note
-        // that element access dereferences the underlying iterator directly
-        // (the proxy befriends tuple_element above for this purpose):
-        // converting the proxy to its reference would invoke hpx::tuple's
-        // tuple-like constructor (made viable by the tuple_size
-        // specialization below), which itself resolves hpx::get<I> back to
+        // that element access calls the proxy's conversion function explicitly
+        // rather than casting (see the comment in operator_brackets_proxy
+        // above): a static_cast to the reference type could resolve to
+        // hpx::tuple's tuple-like constructor (made viable by the tuple_size
+        // specialization above), which itself resolves hpx::get<I> back to
         // these members - infinite mutual recursion.
         static constexpr HPX_HOST_DEVICE HPX_FORCEINLINE type&
         get(util::detail::operator_brackets_proxy<Iterator>& p) noexcept(
-            noexcept(hpx::get<I>(*p.iter_)))
+            noexcept(hpx::get<I>(p.operator typename Iterator::reference())))
         {
-            return hpx::get<I>(*p.iter_);
+            return hpx::get<I>(p.operator typename Iterator::reference());
         }
 
         static constexpr HPX_HOST_DEVICE HPX_FORCEINLINE type const&
         get(util::detail::operator_brackets_proxy<Iterator> const& p) noexcept(
-            noexcept(hpx::get<I>(*p.iter_)))
+            noexcept(hpx::get<I>(p.operator typename Iterator::reference())))
         {
-            return hpx::get<I>(*p.iter_);
+            return hpx::get<I>(p.operator typename Iterator::reference());
         }
     };
 }    // namespace hpx
