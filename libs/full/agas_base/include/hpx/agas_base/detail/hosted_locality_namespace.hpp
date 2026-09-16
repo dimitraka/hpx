@@ -26,7 +26,8 @@
 
 namespace hpx::agas::detail {
 
-    HPX_CXX_EXPORT struct HPX_EXPORT hosted_locality_namespace : locality_namespace
+    HPX_CXX_EXPORT struct HPX_EXPORT hosted_locality_namespace
+      : locality_namespace
     {
         explicit hosted_locality_namespace(naming::address const& addr);
 
