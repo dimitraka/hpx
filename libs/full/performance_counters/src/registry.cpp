@@ -467,11 +467,12 @@ namespace hpx::performance_counters {
 
         counter_info type_info;
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::create_raw_counter", "unknown counter type {}",
                     type_name);
