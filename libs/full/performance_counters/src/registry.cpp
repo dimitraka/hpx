@@ -109,11 +109,11 @@ namespace hpx::performance_counters {
                 return counter_status::already_defined;
             }
 
-            inserted = countertypes_
-                           .emplace(type_name,
-                               counter_data(
-                                   info, create_counter_, discover_counters_))
-                           .second;
+            inserted =
+                countertypes_
+                    .emplace(type_name,
+                        counter_data(info, create_counter_, discover_counters_))
+                    .second;
         }
 
         if (!inserted)
@@ -486,14 +486,14 @@ namespace hpx::performance_counters {
                 counter_type::raw, type_info.type_, info.type_) &&
             is_not_counter_type(counter_type::monotonically_increasing,
                 type_info.type_, info.type_) &&
-            is_not_counter_type(counter_type::aggregating,
-                type_info.type_, info.type_) &&
-            is_not_counter_type(counter_type::elapsed_time,
-                type_info.type_, info.type_) &&
-            is_not_counter_type(counter_type::average_count,
-                type_info.type_, info.type_) &&
-            is_not_counter_type(counter_type::average_timer,
-                type_info.type_, info.type_))
+            is_not_counter_type(
+                counter_type::aggregating, type_info.type_, info.type_) &&
+            is_not_counter_type(
+                counter_type::elapsed_time, type_info.type_, info.type_) &&
+            is_not_counter_type(
+                counter_type::average_count, type_info.type_, info.type_) &&
+            is_not_counter_type(
+                counter_type::average_timer, type_info.type_, info.type_))
         {
             HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                 "registry::create_raw_counter",
