@@ -92,8 +92,9 @@ static bool pre_startup_tested = false;
 int main(int argc, char* argv[])
 {
 #if defined(HPX_HAVE_NETWORKING)
-    // Issue #7480: Test exact bootstrap scenario where threads::get_self_ptr() == nullptr
-    // AND hpx::is_starting() == true. Pre-startup functions execute during bootstrap.
+    // Issue #7480: Test exact bootstrap scenario where
+    // threads::get_self_ptr() == nullptr and hpx::is_starting() == true.
+    // Pre-startup functions execute during bootstrap.
     hpx::register_pre_startup_function([]() {
         HPX_TEST(hpx::is_starting());
 
@@ -105,13 +106,15 @@ int main(int argc, char* argv[])
             hpx::naming::address{});
 
         // Launch an OS thread during pre-startup:
-        // On this OS thread, threads::get_self_ptr() == nullptr and hpx::is_starting() == true.
+        // On this OS thread, `threads::get_self_ptr()` is `nullptr`
+        // and `hpx::is_starting()` is `true`.
         std::thread os_thread([&hosted_ns]() {
             HPX_TEST(nullptr == hpx::threads::get_self_ptr());
             HPX_TEST(hpx::is_starting());
 
-            // Under old code, this call spun infinitely in `while (!endpoints_future.is_ready())`.
-            // Under fixed code, it proceeds to wait_or_handle_timeout(...) and throws future_wait_timed_out.
+            // The old code spun in `while (!endpoints_future.is_ready())`.
+            // The fixed code calls `wait_or_handle_timeout(...)`.
+            // It throws `future_wait_timed_out` when the wait expires.
             bool caught_timeout = false;
             hpx::chrono::high_resolution_timer timer;
             try
