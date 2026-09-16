@@ -283,26 +283,6 @@ namespace hpx::util {
         inline constexpr bool all_lvalue_references_v =
             all_lvalue_references<T>::value;
 
-        // Helper to conditionally define hpx::tuple_size for
-        // operator_brackets_proxy below (the primary hpx::tuple_size template
-        // has only one template parameter, so the condition cannot be
-        // expressed as an enable_if on the specialization itself). When the
-        // condition does not hold, this has no ::value, which keeps it
-        // SFINAE-friendly.
-        template <typename Iterator, typename Enable = void>
-        struct proxy_tuple_size
-        {
-        };
-
-        template <typename Iterator>
-        struct proxy_tuple_size<Iterator,
-            std::enable_if_t<
-                traits::is_tuple_like_v<typename Iterator::reference> &&
-                all_lvalue_references_v<typename Iterator::reference>>>
-          : tuple_size<typename Iterator::reference>
-        {
-        };
-
         // A proxy return type for operator[], needed to deal with iterators
         // that may invalidate references upon destruction. Consider the
         // temporary iterator in *(a + n)
@@ -812,16 +792,21 @@ namespace hpx {
     // The number of elements of the proxy, same as for its reference. This
     // makes the proxy genuinely tuple-like for generic code that gates on
     // traits::is_tuple_like_v before calling hpx::get<I> (e.g. projections).
-    // It is only defined when the reference is tuple-like and all of its
-    // elements are lvalue references (see the specialization of tuple_element
-    // below); otherwise proxy_tuple_size has no ::value, the specialization
-    // falls back to an empty base and the proxy stays non-tuple-like.
+    // The gate lives in the second template argument of the specialization
+    // (mirroring tuple_element below): it is only viable when the reference
+    // is tuple-like and all of its elements are lvalue references; otherwise
+    // the primary (undefined) tuple_size is selected and the proxy stays
+    // non-tuple-like.
     // note: no HPX_CXX_CORE_EXPORT here - export declarations are not
     // allowed on partial specializations (C7760 on MSVC), see range.hpp
     // for the same pattern
     template <typename Iterator>
-    struct tuple_size<util::detail::operator_brackets_proxy<Iterator>>
-      : util::detail::proxy_tuple_size<Iterator>
+    struct tuple_size<util::detail::operator_brackets_proxy<Iterator>,
+        std::enable_if_t<
+            traits::is_tuple_like_v<typename Iterator::reference> &&
+            util::detail::all_lvalue_references_v<
+                typename Iterator::reference>>>
+      : tuple_size<typename Iterator::reference>
     {
     };
 
