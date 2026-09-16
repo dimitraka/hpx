@@ -72,8 +72,7 @@ namespace {
         if (suffix.size() > fullname.size())
             return false;
         return fullname.compare(
-                   fullname.size() - suffix.size(), suffix.size(), suffix) ==
-            0;
+                   fullname.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
     /// \brief Register one uniquely named counter type.
@@ -117,13 +116,13 @@ namespace {
             // Exact name lookup: the anchor type is registered before any
             // racing registration starts and must always be found.
             bool found_anchor = false;
-            HPX_TEST_EQ(hpx::performance_counters::discover_counter_type(
-                            anchor_counter_name,
-                            [&found_anchor](
-                                counter_info const&, hpx::error_code&) {
-                                found_anchor = true;
-                                return true;
-                            }),
+            HPX_TEST_EQ(
+                hpx::performance_counters::discover_counter_type(
+                    anchor_counter_name,
+                    [&found_anchor](counter_info const&, hpx::error_code&) {
+                        found_anchor = true;
+                        return true;
+                    }),
                 hpx::performance_counters::counter_status::valid_data);
             HPX_TEST(found_anchor);
 
@@ -154,7 +153,7 @@ int main()
         hpx::performance_counters::counter_status::valid_data);
 
     std::size_t const num_workers =
-        (std::max)(std::size_t(2), hpx::get_num_worker_threads());
+        (std::max) (std::size_t(2), hpx::get_num_worker_threads());
     std::size_t const num_registrars = num_workers * 4;
     std::size_t const num_discoverers = num_workers;
 
@@ -164,10 +163,9 @@ int main()
     discoverers.reserve(num_discoverers);
     for (std::size_t i = 0; i != num_discoverers; ++i)
     {
-        discoverers.push_back(hpx::async(
-            [&keep_discovering]() {
-                discover_racing_counter_types(keep_discovering);
-            }));
+        discoverers.push_back(hpx::async([&keep_discovering]() {
+            discover_racing_counter_types(keep_discovering);
+        }));
     }
 
     std::vector<hpx::future<void>> registrars;
@@ -190,17 +188,16 @@ int main()
     // locality, so the callback filters down to the ones registered by
     // this test.
     std::set<std::string> discovered;
-    HPX_TEST_EQ(hpx::performance_counters::discover_counter_types(
-                    [&discovered](
-                        hpx::performance_counters::counter_info const& info,
-                        hpx::error_code&) {
-                        if (info.fullname_.find("registry-race") !=
-                            std::string::npos)
-                        {
-                            discovered.insert(info.fullname_);
-                        }
-                        return true;
-                    }),
+    HPX_TEST_EQ(
+        hpx::performance_counters::discover_counter_types(
+            [&discovered](hpx::performance_counters::counter_info const& info,
+                hpx::error_code&) {
+                if (info.fullname_.find("registry-race") != std::string::npos)
+                {
+                    discovered.insert(info.fullname_);
+                }
+                return true;
+            }),
         hpx::performance_counters::counter_status::valid_data);
 
     HPX_TEST_EQ(discovered.size(), num_registrars + 1);
