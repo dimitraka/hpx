@@ -24,7 +24,10 @@ jobs:
     container: stellargroup/build_env:23
     permissions:
       actions: read
-    timeout-minutes: 420
+    # GitHub-hosted runners cap jobs at 360 minutes; the three documentation
+    # steps stay well within this in practice (observed worst case so far:
+    # HTML ~53 + singlehtml ~41 + PDF ~110 minutes).
+    timeout-minutes: 360
 
     steps:
     - uses: actions/checkout@v7
