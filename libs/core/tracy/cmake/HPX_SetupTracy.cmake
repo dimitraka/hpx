@@ -6,42 +6,14 @@
 
 include(HPX_AddDefinitions)
 
-# compatibility with older CMake versions
-if(TRACY_ROOT AND NOT Tracy_ROOT)
-  set(Tracy_ROOT
-      ${TRACY_ROOT}
-      CACHE PATH "Tracy base directory"
-  )
-  unset(TRACY_ROOT CACHE)
-endif()
-
-if(NOT HPX_WITH_FETCH_TRACY)
-  find_package(Tracy)
-  if(NOT Tracy_FOUND)
-    hpx_error(
-      "Could not find Tracy. Set Tracy_ROOT as a CMake or environment variable to point to the Tracy root install directory. Alternatively, set HPX_WITH_FETCH_TRACY=ON to fetch Tracy using CMake's FetchContent (when using this option Asio will be installed together with HPX, be careful about conflicts with separately installed versions of Tracy)."
-    )
-  endif()
-  if(TARGET Tracy::TracyClient AND NOT TARGET tracy::tracy)
-    add_library(tracy::tracy ALIAS Tracy::TracyClient)
-  endif()
-  # We cannot detect whether the system Tracy was built with
-  # TRACY_DBGHELP_LOCK=HpxDbgHelp (Tracy does not record it on the imported
-  # target). Warn on Windows so a mismatch is not silent; either rebuild the
-  # system Tracy with the define, or set HPX_WITH_FETCH_TRACY=ON.
-  if(WIN32)
-    hpx_warn(
-      "HPX_WITH_FETCH_TRACY=OFF on Windows: cannot verify the system Tracy was built with TRACY_DBGHELP_LOCK=HpxDbgHelp. Rebuild Tracy with -DTRACY_DBGHELP_LOCK=HpxDbgHelp, or set HPX_WITH_FETCH_TRACY=ON."
-    )
-  endif()
-elseif(NOT TARGET tracy::tracy)
+if(NOT TARGET tracy::tracy)
   if(FETCHCONTENT_SOURCE_DIR_TRACY)
     hpx_info(
-      "HPX_WITH_FETCH_TRACY=${HPX_WITH_FETCH_TRACY}, Tracy will be used through CMake's FetchContent and installed alongside HPX (FETCHCONTENT_SOURCE_DIR_TRACY=${FETCHCONTENT_SOURCE_DIR_TRACY})"
+      "Tracy will be used through CMake's FetchContent from FETCHCONTENT_SOURCE_DIR_TRACY=${FETCHCONTENT_SOURCE_DIR_TRACY}"
     )
   else()
     hpx_info(
-      "HPX_WITH_FETCH_TRACY=${HPX_WITH_FETCH_TRACY}, TRACY will be fetched using CMake's FetchContent and installed alongside HPX (HPX_WITH_TRACY_TAG=${HPX_WITH_TRACY_TAG})"
+      "Tracy will be fetched using CMake's FetchContent (HPX_WITH_TRACY_TAG=${HPX_WITH_TRACY_TAG})"
     )
   endif()
 
@@ -55,7 +27,10 @@ elseif(NOT TARGET tracy::tracy)
 
   # Set the correct build options for Tracy and make it available. 0.14 defaults
   # TRACY_ENABLE OFF; without forcing it on, a HPX build with HPX_WITH_TRACY=ON
-  # compiles, links, and records nothing.
+  # compiles, links, and records nothing. TRACY_STATIC=ON keeps TracyClient a
+  # static library even under BUILD_SHARED_LIBS=ON, so its link step does not
+  # need HpxDbgHelp* to be resolvable outside hpx_tracy (LTO still picks OBJECT
+  # visibility and is unaffected).
   set(TRACY_ENABLE
       ON
       CACHE BOOL "" FORCE
@@ -65,6 +40,10 @@ elseif(NOT TARGET tracy::tracy)
       CACHE BOOL "" FORCE
   )
   set(TRACY_ON_DEMAND
+      ON
+      CACHE BOOL "" FORCE
+  )
+  set(TRACY_STATIC
       ON
       CACHE BOOL "" FORCE
   )
@@ -82,31 +61,10 @@ elseif(NOT TARGET tracy::tracy)
     TracyClient PUBLIC $<$<CONFIG:Debug>:TRACY_VERBOSE>
   )
   # Serialise Tracy's DbgHelp calls against HPX's own via the wrappers in
-  # hpx_debugging (dbghelp_lock.cpp). Only applies on the FetchContent path; a
-  # system-supplied Tracy must be built with the same define for full interlock
-  # (documented in optimizing_hpx_applications.rst).
-  #
-  # BUILD_SHARED_LIBS=ON turns TracyClient into a shared library, which would
-  # then need HpxDbgHelp* resolved at its own link step. hpx_debugging provides
-  # those symbols but TracyClient does not depend on it; hpx_tracy is what links
-  # both, so a static TracyClient resolves when hpx_tracy links, while a shared
-  # TracyClient does not. Static TracyClient (the default when BUILD_SHARED_LIBS
-  # is unset or OFF) is the supported configuration.
+  # hpx_debugging (dbghelp_lock.cpp). TracyClient is static (forced above), so
+  # HpxDbgHelp* resolves when hpx_tracy links.
   if(WIN32)
     target_compile_definitions(TracyClient PUBLIC TRACY_DBGHELP_LOCK=HpxDbgHelp)
-    # A shared TracyClient's own link step cannot resolve HpxDbgHelp*, since
-    # hpx_debugging depends on TracyClient rather than the other way round. LTO
-    # makes TracyClient an OBJECT library (no per-library link step), and
-    # TRACY_STATIC=ON forces it static, so warn only when neither escape
-    # applies.
-    if(BUILD_SHARED_LIBS
-       AND NOT TRACY_STATIC
-       AND NOT (CMAKE_INTERPROCEDURAL_OPTIMIZATION OR TRACY_LTO)
-    )
-      hpx_warn(
-        "BUILD_SHARED_LIBS=ON on Windows will build TracyClient as a shared library whose link step cannot resolve HpxDbgHelp*. Set TRACY_STATIC=ON, enable LTO, or leave BUILD_SHARED_LIBS unset."
-      )
-    endif()
   endif()
   target_compile_features(TracyClient PRIVATE cxx_std_${HPX_CXX_STANDARD})
 

@@ -1228,14 +1228,6 @@ if(HPX_WITH_TRACY)
   endif()
 endif()
 
-hpx_option(
-  HPX_WITH_FETCH_TRACY
-  BOOL
-  "Use FetchContent to fetch Tracy. By default an installed Tracy will be used. (default: OFF)"
-  OFF
-  CATEGORY "Build Targets"
-)
-
 # Experimental settings
 hpx_option(
   HPX_WITH_IO_POOL
