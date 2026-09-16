@@ -98,11 +98,12 @@ namespace hpx::performance_counters {
             // insertion; it is released before logging, which is not
             // needed for correctness and would otherwise unnecessarily
             // serialize unrelated counter type registrations.
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it != countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::add_counter_type",
                     "counter type already defined: {}", type_name);
@@ -152,7 +153,7 @@ namespace hpx::performance_counters {
 
         if (type_name.find_first_of("*?[]") == std::string::npos)
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
@@ -165,6 +166,7 @@ namespace hpx::performance_counters {
                     types += "  " + it_ct->first + "\n";
                 }
 
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::discover_counter_type",
                     "unknown counter type: {}, known counter types: \n{}",
@@ -190,7 +192,7 @@ namespace hpx::performance_counters {
 
             std::regex rx(str_rx);
 
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             for (auto const& [key, data] : countertypes_)
             {
@@ -215,6 +217,7 @@ namespace hpx::performance_counters {
                     types += "  " + it->first + "\n";
                 }
 
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::discover_counter_type",
                     "counter type {} does not match any known type, known "
@@ -303,7 +306,7 @@ namespace hpx::performance_counters {
         if (!status_is_valid(status))
             return status;
 
-        std::lock_guard<mutex_type> l(mtx_);
+        std::unique_lock<mutex_type> l(mtx_);
 
         auto it = locate_counter_type(type_name);
         if (it == countertypes_.end())
@@ -315,7 +318,7 @@ namespace hpx::performance_counters {
             {
                 types += "  " + it_ct->first + "\n";
             }
-
+            l.unlock();
             HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                 "registry::get_counter_create_function",
                 "counter type {} is not defined, known counter types: \n{}",
@@ -325,6 +328,7 @@ namespace hpx::performance_counters {
 
         if (it->second.create_counter_.empty())
         {
+            l.unlock();
             HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                 "registry::get_counter_create_function",
                 "counter type {} has no associated create function", type_name);
@@ -350,11 +354,12 @@ namespace hpx::performance_counters {
         if (!status_is_valid(status))
             return status;
 
-        std::lock_guard<mutex_type> l(mtx_);
+        std::unique_lock<mutex_type> l(mtx_);
 
         auto it = locate_counter_type(type_name);
         if (it == countertypes_.end())
         {
+            l.unlock();
             HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                 "registry::get_counter_discovery_function",
                 "counter type {} is not defined", type_name);
@@ -363,6 +368,7 @@ namespace hpx::performance_counters {
 
         if (it->second.discover_counters_.empty())
         {
+            l.unlock();
             HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                 "registry::get_counter_discovery_function",
                 "counter type {} has no associated discovery function",
@@ -388,11 +394,12 @@ namespace hpx::performance_counters {
         if (!status_is_valid(status))
             return status;
 
-        std::lock_guard<mutex_type> l(mtx_);
+        std::unique_lock<mutex_type> l(mtx_);
 
         auto it = locate_counter_type(type_name);
         if (it == countertypes_.end())
         {
+            l.unlock();
             HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                 "registry::remove_counter_type", "counter type is not defined");
             return counter_status::counter_type_unknown;
@@ -559,11 +566,12 @@ namespace hpx::performance_counters {
 
         counter_info type_info;
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::create_raw_counter", "unknown counter type {}",
                     type_name);
@@ -630,11 +638,12 @@ namespace hpx::performance_counters {
 
         counter_info type_info;
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::create_counter", "unknown counter type {}",
                     type_name);
@@ -722,11 +731,12 @@ namespace hpx::performance_counters {
 
         counter_info type_info;
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::create_statistics_counter",
                     "unknown counter type {}", type_name);
@@ -948,11 +958,12 @@ namespace hpx::performance_counters {
 
         counter_info type_info;
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::create_arithmetics_counter",
                     "unknown counter type {}", type_name);
@@ -1066,11 +1077,12 @@ namespace hpx::performance_counters {
 
         counter_info type_info;
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::create_arithmetics_counter_extended",
                     "unknown counter type {}", type_name);
@@ -1207,11 +1219,12 @@ namespace hpx::performance_counters {
         // The lock is released before calling into AGAS below, since that
         // call can block or suspend the calling HPX thread.
         {
-            std::lock_guard<mutex_type> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
             auto it = locate_counter_type(type_name);
             if (it == countertypes_.end())
             {
+                l.unlock();
                 HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                     "registry::add_counter", "unknown counter type {}",
                     type_name);
@@ -1272,12 +1285,13 @@ namespace hpx::performance_counters {
         if (!status_is_valid(status))
             return status;
 
-        std::lock_guard<mutex_type> l(mtx_);
+        std::unique_lock<mutex_type> l(mtx_);
 
         // make sure the type of the counter is known to the registry
         auto it = locate_counter_type(type_name);
         if (it == countertypes_.end())
         {
+            l.unlock();
             HPX_THROWS_IF(ec, hpx::error::bad_parameter,
                 "registry::get_counter_type", "unknown counter type {}",
                 type_name);
