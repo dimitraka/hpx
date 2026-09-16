@@ -24,6 +24,7 @@ jobs:
     container: stellargroup/build_env:23
     permissions:
       actions: read
+    timeout-minutes: 420
 
     steps:
     - uses: actions/checkout@v7
@@ -52,17 +53,17 @@ jobs:
               -DHPX_WITH_GIT_COMMIT_SHORT=${{ env.sha_short }}
 
     - name: Build Documentation (HTML)
-      timeout-minutes: 120
+      timeout-minutes: 180
       shell: bash
       run: cmake --build build --target docs-html
 
     - name: Build Documentation (Single HTML)
-      timeout-minutes: 120
+      timeout-minutes: 180
       shell: bash
       run: cmake --build build --target docs-singlehtml
 
     - name: Build Documentation (PDF)
-      timeout-minutes: 120
+      timeout-minutes: 240
       shell: bash
       run: cmake --build build --target docs-latexpdf
 
