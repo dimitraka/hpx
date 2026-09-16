@@ -11,6 +11,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 void static_checks()
 {
+    // std::execution::sequenced_policy, parallel_policy, and
+    // parallel_unsequenced_policy are only visible under C++17 std
+    // execution policy support; guard so the types are not referenced
+    // when the feature is not available.
+#if defined(HPX_HAVE_CXX17_STD_EXECUTION_POLICES)
     static_assert(
         hpx::is_execution_policy<std::execution::sequenced_policy>::value,
         "hpx::is_execution_policy<std::execution::sequenced_policy>::value");
@@ -47,6 +52,7 @@ void static_checks()
                       std::execution::parallel_unsequenced_policy>::value,
         "hpx::is_parallel_execution_policy<std::execution::parallel_"
         "unsequenced_policy>::value");
+#endif
 
 #if defined(HPX_HAVE_CXX20_STD_EXECUTION_POLICES)
     static_assert(
