@@ -13,6 +13,7 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/functional.hpp>
+#include <hpx/modules/logging.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/thread_support.hpp>
 #include <hpx/modules/threading_base.hpp>
@@ -86,6 +87,67 @@ namespace hpx::util {
         }
     }
 
+    void query_counters::refresh_counters()
+    {
+        // Re-discovery is opportunistic: a name pattern that legitimately
+        // matches nothing new should not abort the pending evaluation.
+        // Each call below gets its own lightweight error_code and is
+        // logged at debug level rather than thrown, so a genuine failure
+        // (for instance an AGAS resolution problem) stays visible without
+        // aborting the pending evaluation.
+        std::size_t const size_before = counters_.size();
+
+        if (!names_.empty())
+        {
+            error_code ec(throwmode::lightweight);
+            counters_.add_counters(names_, false, ec);
+            if (ec)
+            {
+                LPCS_(debug).format(
+                    "query_counters::refresh_counters: failed to refresh "
+                    "counters ({})",
+                    ec.get_message());
+            }
+        }
+        if (!reset_names_.empty())
+        {
+            error_code ec(throwmode::lightweight);
+            counters_.add_counters(reset_names_, true, ec);
+            if (ec)
+            {
+                LPCS_(debug).format(
+                    "query_counters::refresh_counters: failed to refresh "
+                    "reset counters ({})",
+                    ec.get_message());
+            }
+        }
+
+        std::vector<performance_counters::counter_info> const infos =
+            counters_.get_counter_infos();
+        if (infos.size() <= size_before)
+            return;    // nothing new was discovered
+
+        // Only the newly discovered counters, at indices
+        // [size_before, infos.size()), need to be started; the rest were
+        // already started by an earlier call.
+        error_code ec2(throwmode::lightweight);
+        counters_.start(launch::sync, size_before, ec2);
+        if (ec2)
+        {
+            LPCS_(debug).format(
+                "query_counters::refresh_counters: failed to start newly "
+                "discovered counters ({})",
+                ec2.get_message());
+        }
+
+        for (std::size_t i = size_before; i != infos.size(); ++i)
+        {
+            std::string const real_name =
+                performance_counters::remove_counter_prefix(infos[i].fullname_);
+            hpx::tracing::create_counter(infos[i].fullname_, real_name);
+        }
+    }
+
     void query_counters::start()
     {
 #if defined(HPX_GCC_VERSION) && HPX_GCC_VERSION >= 110000
@@ -112,6 +174,11 @@ namespace hpx::util {
     {
         timer_.stop(terminate);
         counters_.stop(launch::sync);
+    }
+
+    std::size_t query_counters::size() const
+    {
+        return counters_.size();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -618,6 +685,17 @@ namespace hpx::util {
                 "query_counters::evaluate",
                 "The counters to be evaluated have not been initialized yet");
             return false;
+        }
+
+        if (force)
+        {
+            // This is the final, forced evaluation, e.g. the one performed
+            // when counters are printed at shutdown. Re-discover the
+            // requested counter names so that counters registered after
+            // query_counters::start() was called, such as APEX counters
+            // that only become known to HPX once sampled for the first
+            // time, are still included (see #4627).
+            refresh_counters();
         }
 
         std::vector<performance_counters::counter_info> const infos =
