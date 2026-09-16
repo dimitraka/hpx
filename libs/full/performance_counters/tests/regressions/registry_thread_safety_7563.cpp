@@ -205,7 +205,7 @@ int main()
     bool anchor_found = false;
     for (std::string const& fullname : discovered)
     {
-        if (ends_with(fullname, anchor_counter_name))
+        if (ends_with(fullname, "/anchor"))
             anchor_found = true;
     }
     HPX_TEST(anchor_found);
