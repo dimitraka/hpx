@@ -270,6 +270,10 @@ namespace hpx::threads::policies {
                     // initialize channels needed for work stealing
                     requests_ = new steal_request_channel(size);
                     tasks_ = new task_channel(1);
+
+                    // seed the generator used for victim selection on this
+                    // core
+                    gen_.seed(detail::random_seed());
                 }
             }
 
@@ -293,6 +297,10 @@ namespace hpx::threads::policies {
 
             // core number this scheduler data instance refers to
             std::uint16_t num_thread_ = static_cast<std::uint16_t>(-1);
+
+            // generator used to select a victim for this core, only ever
+            // used by the core itself
+            std::mt19937 gen_;
 
             // adaptive stealing
             std::uint16_t num_recent_steals_ = 0;
@@ -1478,11 +1486,12 @@ namespace hpx::threads::policies {
         }
 #endif
 
-        // return a random victim for the current stealing operation
-        std::size_t random_victim(steal_request const& req) noexcept
+        // return a random victim for the current stealing operation, drawn
+        // from the generator owned by the core performing the selection
+        std::size_t random_victim(
+            std::size_t num_thread, steal_request const& req) noexcept
         {
-            // Victim selection runs concurrently on the pool's workers.
-            static thread_local std::mt19937 gen(detail::random_seed());
+            std::mt19937& gen = data_[num_thread].data_.gen_;
             std::size_t result;
 
             {
@@ -1532,8 +1541,8 @@ namespace hpx::threads::policies {
         }
 
         // return the number of the next victim core
-        std::size_t next_victim([[maybe_unused]] scheduler_data& d,
-            steal_request const& req) noexcept
+        std::size_t next_victim(
+            scheduler_data& d, steal_request const& req) noexcept
         {
             std::size_t victim;
 
@@ -1557,7 +1566,7 @@ namespace hpx::threads::policies {
                 else
 #endif
                 {
-                    victim = random_victim(req);
+                    victim = random_victim(d.num_thread_, req);
                 }
             }
 

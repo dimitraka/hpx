@@ -19,8 +19,9 @@ int main()
     namespace policies = hpx::threads::policies;
     constexpr std::size_t num_workers = 8;
     policies::detail::affinity_data affinity;
+    // initialize eagerly so every core's generator is seeded
     policies::local_workrequesting_scheduler<> scheduler(
-        {num_workers, affinity});
+        {num_workers, affinity}, false);
     std::barrier start(static_cast<std::ptrdiff_t>(num_workers));
     std::vector<std::future<void>> workers;
 
@@ -39,7 +40,7 @@ int main()
             start.arrive_and_wait();
             for (std::size_t i = 0; i != 10000; ++i)
             {
-                auto const victim = scheduler.random_victim(request);
+                auto const victim = scheduler.random_victim(worker, request);
                 HPX_TEST_LT(victim, num_workers);
                 HPX_TEST_NEQ(victim, worker);
             }
