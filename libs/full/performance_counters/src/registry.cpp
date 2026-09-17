@@ -405,9 +405,10 @@ namespace hpx::performance_counters {
             return counter_status::counter_type_unknown;
         }
 
-        LPCS_(info).format("counter type {} unregistered", type_name);
-
         countertypes_.erase(it);
+        l.unlock();
+
+        LPCS_(info).format("counter type {} unregistered", type_name);
 
         if (&ec != &throws)
             ec = make_success_code();
