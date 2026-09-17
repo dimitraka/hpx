@@ -21,9 +21,19 @@ namespace exd = hpx::execution::detail;
 // policy that derives from hpx::execution::detail::execution_policy.
 namespace default_customization_point_tests {
 
-    using policy_type = hpx::execution::sequenced_policy;
-    using new_executor_type = hpx::execution::parallel_executor;
+    using policy_type = hpx::execution::parallel_policy;
+    using new_executor_type = hpx::execution::sequenced_executor;
     using new_parameters_type = hpx::execution::experimental::static_chunk_size;
+
+    // sequenced_executor's category (sequenced_execution_tag) is not
+    // weaker than parallel_policy's (parallel_execution_tag), so this
+    // rebind satisfies the same safety check as
+    // hpx::execution::experimental::rebind_executor.
+    static_assert(hpx::execution::experimental::detail::is_not_weaker_v<
+                      new_executor_type::execution_category,
+                      policy_type::execution_category>,
+        "the executor picked for this test must satisfy the category "
+        "check rebind_policy_executor_t enforces");
 
     // Rebinding the executor leaves the policy's current executor
     // parameters untouched.
@@ -31,7 +41,7 @@ namespace default_customization_point_tests {
         exd::rebind_policy_executor_t<policy_type, new_executor_type>;
 
     static_assert(std::is_same_v<rebound_by_executor,
-                      exd::sequenced_policy_shim<new_executor_type,
+                      exd::parallel_policy_shim<new_executor_type,
                           policy_type::executor_parameters_type>>,
         "rebind_policy_executor_t only changes the executor");
 
@@ -51,7 +61,7 @@ namespace default_customization_point_tests {
 
     static_assert(
         std::is_same_v<rebound_by_parameters,
-            exd::sequenced_policy_shim<typename policy_type::executor_type,
+            exd::parallel_policy_shim<typename policy_type::executor_type,
                 new_parameters_type>>,
         "rebind_policy_parameters_t only changes the executor parameters");
 
@@ -79,6 +89,14 @@ namespace default_customization_point_tests {
                       rebound_both_axes_combined>,
         "rebinding executor and parameters independently, one after the "
         "other, is equivalent to rebinding both at once");
+
+    // The order-independence contract holds structurally for the default
+    // implementation: it always funnels through the same combined
+    // rebind<Executor_, Parameters_>::type mechanism regardless of which
+    // axis is rebound first.
+    static_assert(exd::rebind_policy_order_independent_v<policy_type,
+                      new_executor_type, new_parameters_type>,
+        "the default implementation is order-independent");
 
 }    // namespace default_customization_point_tests
 
@@ -209,6 +227,83 @@ namespace direct_specialization_tests {
         "rebind_policy_executor");
 
 }    // namespace direct_specialization_tests
+
+///////////////////////////////////////////////////////////////////////////
+// A policy that specializes both rebind_policy_executor and
+// rebind_policy_parameters directly, rather than relying on the default
+// implementation. rebind_policy_order_independent_v is not guaranteed
+// automatically for such a policy; it is verified explicitly below to
+// pin down the invariant this specialization relies on.
+namespace two_axis_specialization_tests {
+
+    struct executor_a
+    {
+    };
+
+    struct executor_b
+    {
+    };
+
+    struct parameters_a
+    {
+    };
+
+    struct parameters_b
+    {
+    };
+
+    // Deliberately not shaped as the CRTP execution_policy base expects
+    // (no combined rebind<Executor_, Parameters_>::type member), so it
+    // must opt in to both customization points explicitly.
+    template <typename Executor, typename Parameters>
+    struct two_axis_policy
+    {
+    };
+
+}    // namespace two_axis_specialization_tests
+
+namespace hpx::execution::detail {
+
+    template <typename Executor, typename Parameters, typename NewExecutor>
+    struct rebind_policy_executor<
+        two_axis_specialization_tests::two_axis_policy<Executor, Parameters>,
+        NewExecutor>
+    {
+        using type = two_axis_specialization_tests::two_axis_policy<
+            std::decay_t<NewExecutor>, Parameters>;
+    };
+
+    template <typename Executor, typename Parameters, typename NewParameters>
+    struct rebind_policy_parameters<
+        two_axis_specialization_tests::two_axis_policy<Executor, Parameters>,
+        NewParameters>
+    {
+        using type = two_axis_specialization_tests::two_axis_policy<Executor,
+            std::decay_t<NewParameters>>;
+    };
+}    // namespace hpx::execution::detail
+
+namespace two_axis_specialization_tests {
+
+    using policy_type = two_axis_policy<executor_a, parameters_a>;
+
+    static_assert(
+        std::is_same_v<exd::rebind_policy_executor_t<policy_type, executor_b>,
+            two_axis_policy<executor_b, parameters_a>>,
+        "the executor-axis specialization only changes the executor");
+
+    static_assert(
+        std::is_same_v<
+            exd::rebind_policy_parameters_t<policy_type, parameters_b>,
+            two_axis_policy<executor_a, parameters_b>>,
+        "the parameters-axis specialization only changes the parameters");
+
+    static_assert(exd::rebind_policy_order_independent_v<policy_type,
+                      executor_b, parameters_b>,
+        "a policy specializing both axes directly must keep rebinding "
+        "order-independent");
+
+}    // namespace two_axis_specialization_tests
 
 ///////////////////////////////////////////////////////////////////////////
 int main()
