@@ -36,9 +36,6 @@
 
 #include <hpx/config.hpp>
 #include <hpx/execution/executors/rebind_executor.hpp>
-#include <hpx/execution/traits/executor_traits.hpp>
-#include <hpx/modules/execution_base.hpp>
-#include <hpx/modules/type_support.hpp>
 
 #include <type_traits>
 
