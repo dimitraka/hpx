@@ -160,15 +160,17 @@ namespace hpx::performance_counters {
         counter_status get_counter_type(std::string const& name,
             counter_info& info, error_code& ec = throws);
 
-    protected:
+    private:
         // Both overloads read countertypes_ without locking mtx_
         // themselves; every caller is required to hold mtx_ already.
+        // Private rather than protected since every caller is a registry
+        // member function that already holds mtx_; a derived class would
+        // have no access to mtx_ to satisfy that precondition.
         counter_type_map_type::iterator locate_counter_type(
             std::string const& type_name);
         counter_type_map_type::const_iterator locate_counter_type(
             std::string const& type_name) const;
 
-    private:
         using mutex_type = hpx::spinlock;
 
         // Protects countertypes_ against concurrent registration and
