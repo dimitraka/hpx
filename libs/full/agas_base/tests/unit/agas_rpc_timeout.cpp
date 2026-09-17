@@ -7,6 +7,8 @@
 #include <hpx/init.hpp>
 #include <hpx/modules/agas_base.hpp>
 #include <hpx/modules/errors.hpp>
+#include <hpx/modules/futures.hpp>
+#include <hpx/modules/parcelset_base.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/modules/timing.hpp>
 
@@ -102,15 +104,17 @@ int main(int argc, char* argv[])
         hpx::agas::set_rpc_timeout(
             hpx::chrono::steady_duration(std::chrono::milliseconds(100)));
 
-        hpx::agas::detail::hosted_locality_namespace hosted_ns(
-            hpx::naming::address{});
-
         // Launch an OS thread during pre-startup:
         // On this OS thread, `threads::get_self_ptr()` is `nullptr`
         // and `hpx::is_starting()` is `true`.
-        std::thread os_thread([&hosted_ns]() {
+        std::thread os_thread([]() {
             HPX_TEST(nullptr == hpx::threads::get_self_ptr());
             HPX_TEST(hpx::is_starting());
+
+            // Deliberately unresolved future representing an in-flight
+            // bootstrap RPC that does not complete before the timeout.
+            hpx::promise<hpx::parcelset::endpoints_type> p;
+            hpx::future<hpx::parcelset::endpoints_type> f = p.get_future();
 
             // The old code spun in `while (!endpoints_future.is_ready())`.
             // The fixed code calls `wait_or_handle_timeout(...)`.
@@ -119,7 +123,9 @@ int main(int argc, char* argv[])
             hpx::chrono::high_resolution_timer timer;
             try
             {
-                hosted_ns.resolve_locality(hpx::naming::gid_type{});
+                hpx::wait_or_handle_timeout(HPX_MOVE(f),
+                    "hosted_locality_namespace::resolve_locality",
+                    hpx::agas::get_rpc_timeout());
             }
             catch (hpx::exception const& e)
             {
