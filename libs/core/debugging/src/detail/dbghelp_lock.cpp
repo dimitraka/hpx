@@ -17,9 +17,12 @@ namespace {
 
     // Function-local static so the mutex is constructed on first use,
     // with no static-init ordering question across DLL boundaries.
-    std::mutex& dbghelp_mutex() noexcept
+    // Recursive because re-entry from a Tracy -S zone or a DbgHelp
+    // callback registered later would otherwise deadlock the calling
+    // thread against a lock it already holds.
+    std::recursive_mutex& dbghelp_mutex() noexcept
     {
-        static std::mutex m;
+        static std::recursive_mutex m;
         return m;
     }
 
@@ -35,15 +38,12 @@ namespace {
 
 namespace hpx::util::detail {
 
-    // noexcept over a throwing std::mutex::lock() is deliberate: the
-    // resulting std::terminate is the fail-fast we want, since we cannot
-    // safely proceed with DbgHelp calls if the lock is unavailable.
-    void dbghelp_lock() noexcept
+    void dbghelp_lock()
     {
         dbghelp_mutex().lock();
     }
 
-    void dbghelp_unlock() noexcept
+    void dbghelp_unlock()
     {
         dbghelp_mutex().unlock();
     }
@@ -52,15 +52,17 @@ namespace hpx::util::detail {
 // Tracy interop entry points. TRACY_DBGHELP_LOCK=HpxDbgHelp in
 // HPX_SetupTracy.cmake makes Tracy expand its DbgHelp lock macros
 // to these three symbols. Init is empty; first-use construction of
-// the mutex above covers the same job.
-extern "C" HPX_CORE_EXPORT void HpxDbgHelpInit(void) {}
+// the mutex above covers the same job. noexcept here (unlike the C++
+// wrappers) because an exception escaping a C-linkage boundary is UB;
+// terminate is the well-defined failure we want on this side.
+extern "C" HPX_CORE_EXPORT void HpxDbgHelpInit(void) noexcept {}
 
-extern "C" HPX_CORE_EXPORT void HpxDbgHelpLock(void)
+extern "C" HPX_CORE_EXPORT void HpxDbgHelpLock(void) noexcept
 {
     dbghelp_mutex().lock();
 }
 
-extern "C" HPX_CORE_EXPORT void HpxDbgHelpUnlock(void)
+extern "C" HPX_CORE_EXPORT void HpxDbgHelpUnlock(void) noexcept
 {
     dbghelp_mutex().unlock();
 }

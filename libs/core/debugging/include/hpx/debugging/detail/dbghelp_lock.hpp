@@ -16,12 +16,12 @@
 
 namespace hpx::util::detail {
 
-    HPX_CORE_EXPORT void dbghelp_lock() noexcept;
-    HPX_CORE_EXPORT void dbghelp_unlock() noexcept;
+    HPX_CORE_EXPORT void dbghelp_lock();
+    HPX_CORE_EXPORT void dbghelp_unlock();
 
     struct dbghelp_scoped_lock
     {
-        dbghelp_scoped_lock() noexcept
+        dbghelp_scoped_lock()
         {
             dbghelp_lock();
         }
