@@ -75,10 +75,35 @@ namespace hpx::util {
 
     void query_counters::find_counters()
     {
+        // A wild-card pattern legitimately matching no counter type yet,
+        // e.g. because its provider has not registered one at this point
+        // (see #4627), must not abort start() with the default ec
+        // (throws). This mirrors the lightweight handling
+        // refresh_counters() already uses for the same reason.
         if (!names_.empty())
-            counters_.add_counters(names_);
+        {
+            error_code ec(throwmode::lightweight);
+            counters_.add_counters(names_, false, ec);
+            if (ec)
+            {
+                LPCS_(debug).format(
+                    "query_counters::find_counters: failed to discover "
+                    "counters ({})",
+                    ec.get_message());
+            }
+        }
         if (!reset_names_.empty())
-            counters_.add_counters(reset_names_, true);
+        {
+            error_code ec(throwmode::lightweight);
+            counters_.add_counters(reset_names_, true, ec);
+            if (ec)
+            {
+                LPCS_(debug).format(
+                    "query_counters::find_counters: failed to discover "
+                    "reset counters ({})",
+                    ec.get_message());
+            }
+        }
 
         for (auto const& info : counters_.get_counter_infos())
         {
