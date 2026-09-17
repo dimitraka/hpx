@@ -8,8 +8,6 @@
 /// rebind_policy_parameters_t customization points. Everything here is
 /// checked with static_assert; nothing needs to run.
 
-#include <hpx/execution.hpp>
-#include <hpx/execution/executors/rebind_policy.hpp>
 #include <hpx/modules/testing.hpp>
 
 #include <type_traits>
