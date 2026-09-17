@@ -678,15 +678,6 @@ namespace hpx::util {
             no_output = destination_ == "none";
         }
 
-        if (counters_.size() == 0)
-        {
-            // start has not been called yet
-            HPX_THROWS_IF(ec, hpx::error::invalid_status,
-                "query_counters::evaluate",
-                "The counters to be evaluated have not been initialized yet");
-            return false;
-        }
-
         if (force)
         {
             // This is the final, forced evaluation, e.g. the one performed
@@ -694,8 +685,21 @@ namespace hpx::util {
             // requested counter names so that counters registered after
             // query_counters::start() was called, such as APEX counters
             // that only become known to HPX once sampled for the first
-            // time, are still included (see #4627).
+            // time, are still included (see #4627). This has to happen
+            // before the empty-counter-set check below, since a wildcard
+            // pattern that matched nothing at start() would otherwise
+            // never get a chance to pick up counters that registered
+            // later.
             refresh_counters();
+        }
+
+        if (counters_.size() == 0)
+        {
+            // start has not been called yet
+            HPX_THROWS_IF(ec, hpx::error::invalid_status,
+                "query_counters::evaluate",
+                "The counters to be evaluated have not been initialized yet");
+            return false;
         }
 
         std::vector<performance_counters::counter_info> const infos =

@@ -92,6 +92,42 @@ int hpx_main()
 
     qc.stop_evaluating_counters(true);
 
+    // Cover the case where the wildcard pattern matches nothing at all at
+    // start() time, i.e. counters_.size() == 0 right after start(). A forced
+    // evaluation must still attempt re-discovery instead of failing with
+    // invalid_status, so that a counter registered later can be picked up.
+    std::vector<std::string> const empty_names{
+        "/late_registration_4627_empty/*"};
+    std::vector<std::string> const empty_reset_names;
+
+    hpx::util::query_counters qc_empty(empty_names, empty_reset_names,
+        /* interval = */ 3600000, "none", "normal", std::vector<std::string>{},
+        /* csv_header = */ false, /* print_counters_locally = */ false,
+        /* counter_types = */ false);
+
+    qc_empty.start();
+    HPX_TEST_EQ(qc_empty.size(), std::size_t(0));
+
+    hpx::error_code ec3(hpx::throwmode::lightweight);
+    qc_empty.evaluate_counters(false, nullptr, true, ec3);
+    HPX_TEST(!ec3);
+    HPX_TEST_EQ(qc_empty.size(), std::size_t(0));
+
+    hpx::performance_counters::install_counter_type(
+        "/late_registration_4627_empty/late", &late_counter_value,
+        "counter registered after query_counters::start(), matching a "
+        "pattern that found nothing at start()",
+        "", hpx::performance_counters::counter_type::raw);
+
+    hpx::error_code ec4(hpx::throwmode::lightweight);
+    bool const found_in_previously_empty_set =
+        qc_empty.evaluate_counters(false, nullptr, true, ec4);
+    HPX_TEST(!ec4);
+    HPX_TEST(found_in_previously_empty_set);
+    HPX_TEST_EQ(qc_empty.size(), std::size_t(1));
+
+    qc_empty.stop_evaluating_counters(true);
+
     return hpx::finalize();
 }
 
