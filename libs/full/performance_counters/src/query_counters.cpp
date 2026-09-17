@@ -52,6 +52,7 @@ namespace hpx::util {
       , csv_header_(csv_header)
       , print_counters_locally_(print_counters_locally)
       , counter_types_(counter_types)
+      , started_(false)
       , timer_(hpx::bind_front(&query_counters::evaluate, this_(), false),
             hpx::bind_front(&query_counters::terminate, this_()),
             interval * 1000, "query_counters", true)
@@ -165,6 +166,8 @@ namespace hpx::util {
         find_counters();
 
         counters_.start(launch::sync);
+
+        started_.store(true, std::memory_order_relaxed);
 
         // this will invoke the evaluate function for the first time
         timer_.start();
@@ -490,7 +493,7 @@ namespace hpx::util {
     ///////////////////////////////////////////////////////////////////////////
     void query_counters::start_counters(error_code& ec)
     {
-        if (counters_.size() == 0)
+        if (!started_.load(std::memory_order_relaxed))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -505,7 +508,7 @@ namespace hpx::util {
 
     void query_counters::stop_counters(error_code& ec)
     {
-        if (counters_.size() == 0)
+        if (!started_.load(std::memory_order_relaxed))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -520,7 +523,7 @@ namespace hpx::util {
 
     void query_counters::reset_counters(error_code& ec)
     {
-        if (counters_.size() == 0)
+        if (!started_.load(std::memory_order_relaxed))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -535,7 +538,7 @@ namespace hpx::util {
 
     void query_counters::reinit_counters(bool reset, error_code& ec)
     {
-        if (counters_.size() == 0)
+        if (!started_.load(std::memory_order_relaxed))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -693,9 +696,12 @@ namespace hpx::util {
             refresh_counters();
         }
 
-        if (counters_.size() == 0)
+        if (!started_.load(std::memory_order_relaxed))
         {
-            // start has not been called yet
+            // start has not been called yet. A wildcard pattern matching
+            // no counters at all is a legitimate outcome of start(), not
+            // an error, so counters_.size() == 0 alone cannot be used to
+            // detect this (see #4627).
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
                 "query_counters::evaluate",
                 "The counters to be evaluated have not been initialized yet");

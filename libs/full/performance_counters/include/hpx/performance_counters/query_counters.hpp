@@ -15,6 +15,7 @@
 #include <hpx/performance_counters/counters_fwd.hpp>
 #include <hpx/performance_counters/performance_counter_set.hpp>
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -134,6 +135,12 @@ namespace hpx::util {
         bool csv_header_;
         bool print_counters_locally_;
         bool counter_types_;
+
+        // Whether start() has run. A wildcard pattern such as /apex/* may
+        // legitimately match no counters at all when start() runs, so
+        // counters_.size() == 0 cannot be used to tell "start() was never
+        // called" apart from "start() found nothing (yet)"; see #4627.
+        std::atomic<bool> started_;
 
         interval_timer timer_;
     };
