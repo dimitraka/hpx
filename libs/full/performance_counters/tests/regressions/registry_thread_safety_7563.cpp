@@ -21,6 +21,14 @@
 // invariant once every racing registration has completed: every
 // registered counter type must be discoverable exactly once, i.e. the
 // concurrent access must not have corrupted the registry.
+//
+// Two further tests below exercise the two other bits registry.cpp touches
+// on that the above race doesn't: concurrent registry::remove_counter_type()
+// (several HPX threads erasing the *same* countertypes_ entry at once) and
+// concurrent registry::create_raw_counter() (several HPX threads
+// constructing counter instances of a *shared*, already-registered type at
+// once, so the component-construction work that happens after mtx_ is
+// released genuinely overlaps).
 
 #include <hpx/config.hpp>
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
@@ -28,6 +36,7 @@
 #include <hpx/hpx_main.hpp>
 #include <hpx/include/performance_counters.hpp>
 #include <hpx/include/runtime.hpp>
+#include <hpx/modules/naming_base.hpp>
 #include <hpx/modules/testing.hpp>
 
 #include <algorithm>
@@ -141,86 +150,295 @@ namespace {
             hpx::this_thread::yield();
         }
     }
+
+    void test_concurrent_add_and_discover()
+    {
+        HPX_TEST_EQ(hpx::performance_counters::install_counter_type(
+                        anchor_counter_name, &counter_value,
+                        "anchor counter type used to exercise "
+                        "discover_counter_type() concurrently with "
+                        "registration, regression test for #7563"),
+            hpx::performance_counters::counter_status::valid_data);
+
+        std::size_t const num_workers =
+            (std::max)(std::size_t(2), hpx::get_num_worker_threads());
+        std::size_t const num_registrars = num_workers * 4;
+        std::size_t const num_discoverers = num_workers;
+
+        std::atomic<bool> keep_discovering(true);
+
+        std::vector<hpx::future<void>> discoverers;
+        discoverers.reserve(num_discoverers);
+        for (std::size_t i = 0; i != num_discoverers; ++i)
+        {
+            discoverers.push_back(hpx::async([&keep_discovering]() {
+                discover_racing_counter_types(keep_discovering);
+            }));
+        }
+
+        std::vector<hpx::future<void>> registrars;
+        registrars.reserve(num_registrars);
+        for (std::size_t i = 0; i != num_registrars; ++i)
+        {
+            registrars.push_back(
+                hpx::async([i]() { register_racing_counter_type(i); }));
+        }
+
+        hpx::wait_all(registrars);
+        keep_discovering.store(false, std::memory_order_relaxed);
+        hpx::wait_all(discoverers);
+
+        // With every racing registration now complete, a final, sequential
+        // enumeration must find the anchor plus exactly one entry per
+        // registrar, with none duplicated and none missing: concurrent
+        // access must not have corrupted registry::countertypes_.
+        // discover_counter_types() returns every counter type known to this
+        // locality, so the callback filters down to the ones registered by
+        // this test.
+        std::set<std::string> discovered;
+        HPX_TEST_EQ(
+            hpx::performance_counters::discover_counter_types(
+                [&discovered](
+                    hpx::performance_counters::counter_info const& info,
+                    hpx::error_code&) {
+                    if (info.fullname_.find("registry-race") !=
+                        std::string::npos)
+                    {
+                        discovered.insert(info.fullname_);
+                    }
+                    return true;
+                }),
+            hpx::performance_counters::counter_status::valid_data);
+
+        HPX_TEST_EQ(discovered.size(), num_registrars + 1);
+
+        bool anchor_found = false;
+        for (std::string const& fullname : discovered)
+        {
+            if (ends_with(fullname, "/anchor"))
+                anchor_found = true;
+        }
+        HPX_TEST(anchor_found);
+
+        for (std::size_t i = 0; i != num_registrars; ++i)
+        {
+            std::string const suffix = "/counter-" + std::to_string(i);
+            bool this_one_found = false;
+            for (std::string const& fullname : discovered)
+            {
+                if (ends_with(fullname, suffix))
+                    this_one_found = true;
+            }
+            HPX_TEST(this_one_found);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////
+    // Concurrent registry::remove_counter_type(): several HPX threads race
+    // to erase the *same* countertypes_ entry. remove_counter_type() holds
+    // mtx_ across locate_counter_type() and the erase() together (unlike
+    // add_counter_type(), it doesn't need to release the lock before doing
+    // anything blocking), so exactly one racer must observe valid_data and
+    // every other racer must observe counter_type_unknown -- never a crash,
+    // a hang, or any other status.
+
+    std::string const removal_counter_name_base =
+        "/tests/registry-race/remove-";
+
+    /// \brief Register one counter type that will subsequently be raced
+    ///        over by several concurrent remove_counter_type() calls.
+    ///
+    /// Registration itself happens sequentially, before the race starts,
+    /// so that the race is confined to removal.
+    void register_removal_counter_type(std::size_t index)
+    {
+        std::string const name =
+            removal_counter_name_base + std::to_string(index);
+        HPX_TEST_EQ(hpx::performance_counters::install_counter_type(name,
+                        &counter_value,
+                        "counter type raced over by concurrent "
+                        "remove_counter_type() calls, regression test for "
+                        "#7563"),
+            hpx::performance_counters::counter_status::valid_data);
+    }
+
+    /// \brief Attempt to remove the counter type registered by
+    ///        \a register_removal_counter_type(index).
+    ///
+    /// Called concurrently, several times over for the same \a index, from
+    /// independent HPX worker threads.
+    void remove_racing_counter_type(std::size_t index,
+        std::atomic<std::size_t>& removed_ok,
+        std::atomic<std::size_t>& unexpected_status)
+    {
+        using hpx::performance_counters::counter_info;
+        using hpx::performance_counters::counter_status;
+        using hpx::performance_counters::registry;
+
+        counter_info info;
+        info.fullname_ = removal_counter_name_base + std::to_string(index);
+
+        hpx::error_code ec(hpx::throwmode::lightweight);
+        counter_status const status =
+            registry::instance().remove_counter_type(info, ec);
+
+        if (status == counter_status::valid_data)
+        {
+            ++removed_ok;
+        }
+        else if (status != counter_status::counter_type_unknown)
+        {
+            // Anything other than "I won the race" or "someone already
+            // removed it" means remove_counter_type() handed back
+            // inconsistent data under contention.
+            ++unexpected_status;
+        }
+    }
+
+    void test_concurrent_remove_counter_type()
+    {
+        constexpr std::size_t num_types = 16;
+        constexpr std::size_t removers_per_type = 4;
+
+        for (std::size_t i = 0; i != num_types; ++i)
+            register_removal_counter_type(i);
+
+        std::atomic<std::size_t> removed_ok{0};
+        std::atomic<std::size_t> unexpected_status{0};
+
+        std::vector<hpx::future<void>> removers;
+        removers.reserve(num_types * removers_per_type);
+        for (std::size_t i = 0; i != num_types; ++i)
+        {
+            for (std::size_t j = 0; j != removers_per_type; ++j)
+            {
+                removers.push_back(
+                    hpx::async([i, &removed_ok, &unexpected_status]() {
+                        remove_racing_counter_type(
+                            i, removed_ok, unexpected_status);
+                    }));
+            }
+        }
+        hpx::wait_all(removers);
+
+        HPX_TEST_EQ(unexpected_status.load(), std::size_t(0));
+
+        // Exactly one of the removers_per_type racers per type must have
+        // won; the type must not still be present (no two racers can both
+        // "win" the same erase), and it must not have vanished twice.
+        HPX_TEST_EQ(removed_ok.load(), num_types);
+
+        for (std::size_t i = 0; i != num_types; ++i)
+        {
+            using hpx::performance_counters::counter_info;
+            using hpx::performance_counters::counter_status;
+            using hpx::performance_counters::registry;
+
+            counter_info info;
+            info.fullname_ = removal_counter_name_base + std::to_string(i);
+
+            hpx::error_code ec(hpx::throwmode::lightweight);
+            counter_status const status =
+                registry::instance().remove_counter_type(info, ec);
+            HPX_TEST_EQ(status, counter_status::counter_type_unknown);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////
+    // Concurrent registry::create_raw_counter(): several HPX threads race
+    // to create distinct counter *instances* of one *shared*, already
+    // registered counter type. The type lookup in create_raw_counter() is
+    // done under mtx_ and a copy of the type's counter_info is taken before
+    // the lock is released; the component construction that follows (which
+    // can suspend the calling HPX thread) happens without holding mtx_, so
+    // this genuinely exercises concurrent, overlapping component
+    // construction rather than construction serialized behind the lock.
+
+    std::string const create_counter_type_name =
+        "/tests/registry-race/create-counter";
+
+    /// \brief Create one instance of the shared, pre-registered counter
+    ///        type.
+    ///
+    /// Called concurrently, once per creator task, from independent HPX
+    /// worker threads, all racing to create_raw_counter() against the same
+    /// registered type at once.
+    ///
+    /// \param index Used to build a unique instance name (via the
+    ///              '@parameters' suffix) so that every racer creates a
+    ///              distinct counter instance rather than colliding on the
+    ///              same one.
+    void create_racing_counter_instance(std::size_t index,
+        std::atomic<std::size_t>& created_ok,
+        std::atomic<std::size_t>& failures)
+    {
+        using hpx::performance_counters::counter_info;
+        using hpx::performance_counters::counter_status;
+        using hpx::performance_counters::registry;
+
+        counter_info info;
+        info.fullname_ = create_counter_type_name + "@" + std::to_string(index);
+
+        hpx::naming::gid_type id;
+        hpx::error_code ec(hpx::throwmode::lightweight);
+
+        hpx::function<std::int64_t(bool)> const f(&counter_value);
+        counter_status const status =
+            registry::instance().create_raw_counter(info, f, id, ec);
+
+        if (status == counter_status::valid_data && !ec &&
+            id != hpx::naming::invalid_gid)
+        {
+            ++created_ok;
+        }
+        else
+        {
+            ++failures;
+        }
+    }
+
+    void test_concurrent_create_raw_counter()
+    {
+        HPX_TEST_EQ(hpx::performance_counters::install_counter_type(
+                        create_counter_type_name, &counter_value,
+                        "counter type shared by every instance created "
+                        "concurrently by test_concurrent_create_raw_counter, "
+                        "regression test for #7563"),
+            hpx::performance_counters::counter_status::valid_data);
+
+        constexpr std::size_t num_instances = 32;
+
+        std::atomic<std::size_t> created_ok{0};
+        std::atomic<std::size_t> failures{0};
+
+        std::vector<hpx::future<void>> creators;
+        creators.reserve(num_instances);
+        for (std::size_t i = 0; i != num_instances; ++i)
+        {
+            creators.push_back(hpx::async([i, &created_ok, &failures]() {
+                create_racing_counter_instance(i, created_ok, failures);
+            }));
+        }
+        hpx::wait_all(creators);
+
+        HPX_TEST_EQ(failures.load(), std::size_t(0));
+        HPX_TEST_EQ(created_ok.load(), num_instances);
+    }
 }    // namespace
 
 int main()
 {
-    HPX_TEST_EQ(hpx::performance_counters::install_counter_type(
-                    anchor_counter_name, &counter_value,
-                    "anchor counter type used to exercise "
-                    "discover_counter_type() concurrently with "
-                    "registration, regression test for #7563"),
-        hpx::performance_counters::counter_status::valid_data);
+    test_concurrent_add_and_discover();
 
-    std::size_t const num_workers =
-        (std::max) (std::size_t(2), hpx::get_num_worker_threads());
-    std::size_t const num_registrars = num_workers * 4;
-    std::size_t const num_discoverers = num_workers;
-
-    std::atomic<bool> keep_discovering(true);
-
-    std::vector<hpx::future<void>> discoverers;
-    discoverers.reserve(num_discoverers);
-    for (std::size_t i = 0; i != num_discoverers; ++i)
-    {
-        discoverers.push_back(hpx::async([&keep_discovering]() {
-            discover_racing_counter_types(keep_discovering);
-        }));
-    }
-
-    std::vector<hpx::future<void>> registrars;
-    registrars.reserve(num_registrars);
-    for (std::size_t i = 0; i != num_registrars; ++i)
-    {
-        registrars.push_back(
-            hpx::async([i]() { register_racing_counter_type(i); }));
-    }
-
-    hpx::wait_all(registrars);
-    keep_discovering.store(false, std::memory_order_relaxed);
-    hpx::wait_all(discoverers);
-
-    // With every racing registration now complete, a final, sequential
-    // enumeration must find the anchor plus exactly one entry per
-    // registrar, with none duplicated and none missing: concurrent
-    // access must not have corrupted registry::countertypes_.
-    // discover_counter_types() returns every counter type known to this
-    // locality, so the callback filters down to the ones registered by
-    // this test.
-    std::set<std::string> discovered;
-    HPX_TEST_EQ(
-        hpx::performance_counters::discover_counter_types(
-            [&discovered](hpx::performance_counters::counter_info const& info,
-                hpx::error_code&) {
-                if (info.fullname_.find("registry-race") != std::string::npos)
-                {
-                    discovered.insert(info.fullname_);
-                }
-                return true;
-            }),
-        hpx::performance_counters::counter_status::valid_data);
-
-    HPX_TEST_EQ(discovered.size(), num_registrars + 1);
-
-    bool anchor_found = false;
-    for (std::string const& fullname : discovered)
-    {
-        if (ends_with(fullname, "/anchor"))
-            anchor_found = true;
-    }
-    HPX_TEST(anchor_found);
-
-    for (std::size_t i = 0; i != num_registrars; ++i)
-    {
-        std::string const suffix = "/counter-" + std::to_string(i);
-        bool this_one_found = false;
-        for (std::string const& fullname : discovered)
-        {
-            if (ends_with(fullname, suffix))
-                this_one_found = true;
-        }
-        HPX_TEST(this_one_found);
-    }
+    // Exercises the two other bits registry.cpp's locking touches that
+    // test_concurrent_add_and_discover() above doesn't: concurrent
+    // remove_counter_type(), and concurrent counter creation
+    // (create_raw_counter()) against a shared, already-registered type.
+    // Run after the discovery race above, and using distinct name prefixes
+    // ("remove-"/"create-counter" rather than "counter-"), so as not to
+    // disturb the exact counts that race already asserted on.
+    test_concurrent_remove_counter_type();
+    test_concurrent_create_raw_counter();
 
     return hpx::util::report_errors();
 }
