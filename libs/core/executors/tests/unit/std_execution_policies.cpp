@@ -112,14 +112,12 @@ void static_checks()
         "!hpx::is_vectorpack_execution_policy<std::execution::parallel_"
         "unsequenced_policy>::value");
 
-    // is_unsequenced_execution_policy is false here too, for every std::
-    // policy including std::execution::unsequenced_policy itself. This
-    // preserves existing behavior rather than changing it: the original
-    // specializations in std_execution_policy.hpp never set is_unsequenced
-    // for any std:: policy, only is_sequenced. Worth a second look upstream,
-    // since it means hpx::is_unsequenced_execution_policy_v disagrees with
-    // the type's own name for std::execution::unsequenced_policy, but that
-    // is a pre-existing question separate from this test.
+    // is_unsequenced_execution_policy is true for the two std:: policies
+    // whose execution may be vectorized, mirroring the corresponding
+    // hpx::execution::detail::unsequenced_policy_shim and
+    // parallel_unsequenced_policy_shim specializations in
+    // execution_policy.hpp, and false for the two that must not be
+    // vectorized.
     static_assert(!hpx::is_unsequenced_execution_policy<
                       std::execution::sequenced_policy>::value,
         "!hpx::is_unsequenced_execution_policy<std::execution::sequenced_"
@@ -128,9 +126,9 @@ void static_checks()
                       std::execution::parallel_policy>::value,
         "!hpx::is_unsequenced_execution_policy<std::execution::parallel_"
         "policy>::value");
-    static_assert(!hpx::is_unsequenced_execution_policy<
+    static_assert(hpx::is_unsequenced_execution_policy<
                       std::execution::parallel_unsequenced_policy>::value,
-        "!hpx::is_unsequenced_execution_policy<std::execution::parallel_"
+        "hpx::is_unsequenced_execution_policy<std::execution::parallel_"
         "unsequenced_policy>::value");
 
 #endif
@@ -147,9 +145,9 @@ void static_checks()
                       std::execution::unsequenced_policy>::value,
         "!hpx::is_vectorpack_execution_policy<std::execution::unsequenced_"
         "policy>::value");
-    static_assert(!hpx::is_unsequenced_execution_policy<
+    static_assert(hpx::is_unsequenced_execution_policy<
                       std::execution::unsequenced_policy>::value,
-        "!hpx::is_unsequenced_execution_policy<std::execution::unsequenced_"
+        "hpx::is_unsequenced_execution_policy<std::execution::unsequenced_"
         "policy>::value");
 #endif
 }

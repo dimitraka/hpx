@@ -44,6 +44,7 @@ namespace hpx::detail {
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_parallel = true;
+        static constexpr bool is_unsequenced = true;
     };
 
 #if defined(HPX_HAVE_CXX20_STD_EXECUTION_POLICES)
@@ -53,6 +54,7 @@ namespace hpx::detail {
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_sequenced = true;
+        static constexpr bool is_unsequenced = true;
     };
 #endif
     /// \endcond
