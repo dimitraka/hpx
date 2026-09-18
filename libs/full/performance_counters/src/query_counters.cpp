@@ -23,6 +23,7 @@
 #include <hpx/performance_counters/counters.hpp>
 #include <hpx/performance_counters/performance_counter.hpp>
 #include <hpx/performance_counters/query_counters.hpp>
+#include <hpx/performance_counters/registry.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -53,6 +54,7 @@ namespace hpx::util {
       , print_counters_locally_(print_counters_locally)
       , counter_types_(counter_types)
       , started_(false)
+      , last_known_generation_(0)
       , timer_(hpx::bind_front(&query_counters::evaluate, this_(), false),
             hpx::bind_front(&query_counters::terminate, this_()),
             interval * 1000, "query_counters", true)
@@ -115,6 +117,14 @@ namespace hpx::util {
 
     void query_counters::refresh_counters()
     {
+        // Snapshot the registry generation before running discovery. If
+        // another counter type is registered concurrently while discovery
+        // below is in flight, this snapshot will already be stale, but
+        // that's fine: it simply means the next evaluate() will see a
+        // generation mismatch again and refresh once more.
+        std::uint64_t const current_generation =
+            performance_counters::registry::instance().generation();
+
         // Re-discovery is opportunistic: a name pattern that legitimately
         // matches nothing new should not abort the pending evaluation.
         // Each call below gets its own lightweight error_code and is
@@ -147,6 +157,9 @@ namespace hpx::util {
                     ec.get_message());
             }
         }
+
+        last_known_generation_.store(
+            current_generation, std::memory_order_relaxed);
 
         std::vector<performance_counters::counter_info> const infos =
             counters_.get_counter_infos();
@@ -189,6 +202,14 @@ namespace hpx::util {
 #endif
 
         find_counters();
+
+        // Snapshot the registry generation observed by find_counters()
+        // above, so the first periodic evaluate() doesn't immediately
+        // pay for a redundant refresh_counters() call for counter types
+        // that were already picked up here.
+        last_known_generation_.store(
+            performance_counters::registry::instance().generation(),
+            std::memory_order_relaxed);
 
         counters_.start(launch::sync);
 
@@ -723,14 +744,24 @@ namespace hpx::util {
             return false;
         }
 
-        if (force)
+        // Re-discover the requested counter names so that counters
+        // registered after query_counters::start() was called, such as
+        // APEX counters that only become known to HPX once sampled for the
+        // first time, are still included (see #4627). A forced evaluation
+        // (e.g. the one performed when counters are printed at shutdown)
+        // always refreshes. A periodic evaluation only pays for the actual,
+        // AGAS-touching refresh_counters() call when the performance
+        // counter type registry's generation has moved since the last time
+        // this object refreshed -- a single atomic load and compare
+        // otherwise, so widening this to periodic evaluations does not add
+        // per-tick discovery overhead in the common case where nothing new
+        // has been registered.
+        std::uint64_t const current_generation =
+            performance_counters::registry::instance().generation();
+        if (force ||
+            current_generation !=
+                last_known_generation_.load(std::memory_order_relaxed))
         {
-            // This is the final, forced evaluation, e.g. the one performed
-            // when counters are printed at shutdown. Re-discover the
-            // requested counter names so that counters registered after
-            // query_counters::start() was called, such as APEX counters
-            // that only become known to HPX once sampled for the first
-            // time, are still included (see #4627).
             refresh_counters();
         }
 

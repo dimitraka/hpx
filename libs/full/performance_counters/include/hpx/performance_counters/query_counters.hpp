@@ -142,6 +142,14 @@ namespace hpx::util {
         // called" apart from "start() found nothing (yet)"; see #4627.
         std::atomic<bool> started_;
 
+        // The performance_counters::registry generation last observed by
+        // refresh_counters(). Compared against registry::instance()
+        // .generation() so that periodic evaluations can cheaply detect
+        // "nothing new was registered since last time" (a single atomic
+        // load) without paying for a full, AGAS-touching re-discovery on
+        // every tick; see #4627.
+        std::atomic<std::uint64_t> last_known_generation_;
+
         interval_timer timer_;
     };
 }    // namespace hpx::util
