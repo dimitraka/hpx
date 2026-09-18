@@ -161,7 +161,7 @@ namespace {
             hpx::performance_counters::counter_status::valid_data);
 
         std::size_t const num_workers =
-            (std::max)(std::size_t(2), hpx::get_num_worker_threads());
+            (std::max) (std::size_t(2), hpx::get_num_worker_threads());
         std::size_t const num_registrars = num_workers * 4;
         std::size_t const num_discoverers = num_workers;
 
@@ -196,18 +196,17 @@ namespace {
         // locality, so the callback filters down to the ones registered by
         // this test.
         std::set<std::string> discovered;
-        HPX_TEST_EQ(
-            hpx::performance_counters::discover_counter_types(
-                [&discovered](
-                    hpx::performance_counters::counter_info const& info,
-                    hpx::error_code&) {
-                    if (info.fullname_.find("registry-race") !=
-                        std::string::npos)
-                    {
-                        discovered.insert(info.fullname_);
-                    }
-                    return true;
-                }),
+        HPX_TEST_EQ(hpx::performance_counters::discover_counter_types(
+                        [&discovered](
+                            hpx::performance_counters::counter_info const& info,
+                            hpx::error_code&) {
+                            if (info.fullname_.find("registry-race") !=
+                                std::string::npos)
+                            {
+                                discovered.insert(info.fullname_);
+                            }
+                            return true;
+                        }),
             hpx::performance_counters::counter_status::valid_data);
 
         HPX_TEST_EQ(discovered.size(), num_registrars + 1);
