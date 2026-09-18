@@ -124,12 +124,12 @@ namespace hpx::threads {
             hpx::util::get_entry_as<std::int64_t>(rtcfg_,
                 "hpx.thread_queue.max_terminated_threads",
                 HPX_THREAD_QUEUE_MAX_TERMINATED_THREADS);
-        std::uint64_t const init_threads_count =
-            hpx::util::get_entry_as<std::int64_t>(rtcfg_,
+        std::size_t const init_threads_count =
+            hpx::util::get_entry_as<std::size_t>(rtcfg_,
                 "hpx.thread_queue.init_threads_count",
                 HPX_THREAD_QUEUE_INIT_THREADS_COUNT);
-        std::uint64_t const cached_threads_count =
-            hpx::util::get_entry_as<std::int64_t>(rtcfg_,
+        std::size_t const cached_threads_count =
+            hpx::util::get_entry_as<std::size_t>(rtcfg_,
                 "hpx.thread_queue.cached_threads_count",
                 HPX_THREAD_QUEUE_CACHED_THREADS_COUNT);
         double const max_idle_backoff_time = hpx::util::get_entry_as<double>(

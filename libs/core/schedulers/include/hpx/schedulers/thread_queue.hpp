@@ -1321,7 +1321,7 @@ namespace hpx::threads::policies {
                 "without changing the code here.");
 
             std::lock_guard<mutex_type> lk(mtx_);
-            for (std::uint64_t i = 0; i < parameters_.init_threads_count_; ++i)
+            for (std::size_t i = 0; i < parameters_.init_threads_count_; ++i)
             {
                 // We don't care about the init parameters since this thread
                 // will be rebound once it is actually used
