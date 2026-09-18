@@ -22,16 +22,25 @@ namespace hpx::serialization::detail {
     // that succeeds at the wrong size, so refuse the archive instead.
     [[nodiscard]] inline std::size_t to_size(std::uint64_t const size)
     {
-        std::size_t const result = static_cast<std::size_t>(size);
-        if (result != size)
+        if constexpr (sizeof(std::size_t) >= sizeof(std::uint64_t))
         {
-            HPX_THROW_EXCEPTION(hpx::error::serialization_error,
-                "hpx::serialization::detail::to_size",
-                "the archive holds a collection of {} elements, which does not "
-                "fit into std::size_t on this platform",
-                size);
+            // every size that can be stored can also be represented here,
+            // there is nothing to check
+            return static_cast<std::size_t>(size);
         }
-        return result;
+        else
+        {
+            std::size_t const result = static_cast<std::size_t>(size);
+            if (result != size)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::serialization_error,
+                    "hpx::serialization::detail::to_size",
+                    "the archive holds a collection of {} elements, which does "
+                    "not fit into std::size_t on this platform",
+                    size);
+            }
+            return result;
+        }
     }
 
     // Same conversion for values that are a limit rather than a length. One
@@ -40,8 +49,15 @@ namespace hpx::serialization::detail {
     [[nodiscard]] constexpr std::size_t clamp_to_size(
         std::uint64_t const size) noexcept
     {
-        constexpr std::uint64_t max_size = static_cast<std::uint64_t>(
-            (std::numeric_limits<std::size_t>::max)());
-        return static_cast<std::size_t>(size < max_size ? size : max_size);
+        if constexpr (sizeof(std::size_t) >= sizeof(std::uint64_t))
+        {
+            return static_cast<std::size_t>(size);
+        }
+        else
+        {
+            constexpr std::uint64_t max_size = static_cast<std::uint64_t>(
+                (std::numeric_limits<std::size_t>::max)());
+            return static_cast<std::size_t>(size < max_size ? size : max_size);
+        }
     }
 }    // namespace hpx::serialization::detail
