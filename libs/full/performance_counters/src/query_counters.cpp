@@ -192,7 +192,7 @@ namespace hpx::util {
 
         counters_.start(launch::sync);
 
-        started_.store(true, std::memory_order_relaxed);
+        started_.store(true, std::memory_order_release);
 
         // this will invoke the evaluate function for the first time
         timer_.start();
@@ -518,7 +518,7 @@ namespace hpx::util {
     ///////////////////////////////////////////////////////////////////////////
     void query_counters::start_counters(error_code& ec)
     {
-        if (!started_.load(std::memory_order_relaxed))
+        if (!started_.load(std::memory_order_acquire))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -533,7 +533,7 @@ namespace hpx::util {
 
     void query_counters::stop_counters(error_code& ec)
     {
-        if (!started_.load(std::memory_order_relaxed))
+        if (!started_.load(std::memory_order_acquire))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -548,7 +548,7 @@ namespace hpx::util {
 
     void query_counters::reset_counters(error_code& ec)
     {
-        if (!started_.load(std::memory_order_relaxed))
+        if (!started_.load(std::memory_order_acquire))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -563,7 +563,7 @@ namespace hpx::util {
 
     void query_counters::reinit_counters(bool reset, error_code& ec)
     {
-        if (!started_.load(std::memory_order_relaxed))
+        if (!started_.load(std::memory_order_acquire))
         {
             // start has not been called yet
             HPX_THROWS_IF(ec, hpx::error::invalid_status,
@@ -706,6 +706,23 @@ namespace hpx::util {
             no_output = destination_ == "none";
         }
 
+        if (!started_.load(std::memory_order_acquire))
+        {
+            // start has not been called yet. A wildcard pattern matching
+            // no counters at all is a legitimate outcome of start(), not
+            // an error, so counters_.size() == 0 alone cannot be used to
+            // detect this (see #4627). This check must happen before
+            // refresh_counters() below: refresh_counters() can start newly
+            // discovered counter instances as a side effect, and if that
+            // ran while started_ was still false, a subsequent legitimate
+            // start() call would restart from index 0 and double-start
+            // those same counters.
+            HPX_THROWS_IF(ec, hpx::error::invalid_status,
+                "query_counters::evaluate",
+                "The counters to be evaluated have not been initialized yet");
+            return false;
+        }
+
         if (force)
         {
             // This is the final, forced evaluation, e.g. the one performed
@@ -713,24 +730,8 @@ namespace hpx::util {
             // requested counter names so that counters registered after
             // query_counters::start() was called, such as APEX counters
             // that only become known to HPX once sampled for the first
-            // time, are still included (see #4627). This has to happen
-            // before the empty-counter-set check below, since a wildcard
-            // pattern that matched nothing at start() would otherwise
-            // never get a chance to pick up counters that registered
-            // later.
+            // time, are still included (see #4627).
             refresh_counters();
-        }
-
-        if (!started_.load(std::memory_order_relaxed))
-        {
-            // start has not been called yet. A wildcard pattern matching
-            // no counters at all is a legitimate outcome of start(), not
-            // an error, so counters_.size() == 0 alone cannot be used to
-            // detect this (see #4627).
-            HPX_THROWS_IF(ec, hpx::error::invalid_status,
-                "query_counters::evaluate",
-                "The counters to be evaluated have not been initialized yet");
-            return false;
         }
 
         std::vector<performance_counters::counter_info> const infos =
