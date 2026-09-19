@@ -20,7 +20,8 @@ namespace hpx::serialization::detail {
     // can therefore hand a 32 bit receiver a size this process could never
     // hold. Truncating it would turn an allocation that has to fail into one
     // that succeeds at the wrong size, so refuse the archive instead.
-    [[nodiscard]] inline std::size_t to_size(std::uint64_t const size)
+    [[nodiscard]] inline std::size_t to_size(std::uint64_t const size) noexcept(
+        sizeof(std::size_t) >= sizeof(std::uint64_t))
     {
         if constexpr (sizeof(std::size_t) >= sizeof(std::uint64_t))
         {
