@@ -119,9 +119,15 @@ int hpx_main()
         "pattern that found nothing at start()",
         "", hpx::performance_counters::counter_type::raw);
 
+    // Use force = false here (unlike the checks above) so this exercises
+    // the periodic, generation-triggered refresh path in
+    // evaluate_counters() rather than the always-refresh forced path: the
+    // counter type registered just above bumped the registry generation,
+    // so even a non-forced evaluation must notice the mismatch against
+    // last_known_generation_ and re-run discovery.
     hpx::error_code ec4(hpx::throwmode::lightweight);
     bool const found_in_previously_empty_set =
-        qc_empty.evaluate_counters(false, nullptr, true, ec4);
+        qc_empty.evaluate_counters(false, nullptr, false, ec4);
     HPX_TEST(!ec4);
     HPX_TEST(found_in_previously_empty_set);
     HPX_TEST_EQ(qc_empty.size(), std::size_t(1));

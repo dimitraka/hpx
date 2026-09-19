@@ -61,7 +61,14 @@ namespace hpx::util {
             error_code& ec = throws);
 
     protected:
-        void find_counters();
+        /// \brief Resolve the counter names this object was constructed
+        ///        with.
+        ///
+        /// \returns false if any of the requested (non-empty) name lists
+        ///          failed to resolve without error; true otherwise. A
+        ///          wild-card pattern that legitimately matches nothing yet
+        ///          still counts as success (see #4627).
+        bool find_counters();
 
         /// \brief Re-run discovery for the counter names this object was
         ///        constructed with and merge any newly found counters into
@@ -77,7 +84,15 @@ namespace hpx::util {
         /// counters are printed at shutdown, allows those late counters to
         /// be discovered and included as well. Counters that were already
         /// part of the set are left untouched.
-        void refresh_counters();
+        ///
+        /// \returns false if any of the requested (non-empty) name lists
+        ///          failed to resolve without error, or if starting any
+        ///          newly discovered counters failed; true otherwise. The
+        ///          registry generation snapshot taken before discovery is
+        ///          only cached (last_known_generation_) when this returns
+        ///          true, so a partial/failed refresh is retried on the
+        ///          next evaluation rather than being silently forgotten.
+        bool refresh_counters();
 
         bool print_raw_counters(bool destination_is_cout, bool reset,
             bool no_output, char const* description,

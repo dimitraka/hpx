@@ -75,19 +75,22 @@ namespace hpx::util {
         counters_.release();
     }
 
-    void query_counters::find_counters()
+    bool query_counters::find_counters()
     {
         // A wild-card pattern legitimately matching no counter type yet,
         // e.g. because its provider has not registered one at this point
         // (see #4627), must not abort start() with the default ec
         // (throws). This mirrors the lightweight handling
         // refresh_counters() already uses for the same reason.
+        bool success = true;
+
         if (!names_.empty())
         {
             error_code ec(throwmode::lightweight);
             counters_.add_counters(names_, false, ec);
             if (ec)
             {
+                success = false;
                 LPCS_(debug).format(
                     "query_counters::find_counters: failed to discover "
                     "counters ({})",
@@ -100,6 +103,7 @@ namespace hpx::util {
             counters_.add_counters(reset_names_, true, ec);
             if (ec)
             {
+                success = false;
                 LPCS_(debug).format(
                     "query_counters::find_counters: failed to discover "
                     "reset counters ({})",
@@ -113,9 +117,11 @@ namespace hpx::util {
                 performance_counters::remove_counter_prefix(info.fullname_);
             hpx::tracing::create_counter(info.fullname_, real_name);
         }
+
+        return success;
     }
 
-    void query_counters::refresh_counters()
+    bool query_counters::refresh_counters()
     {
         // Snapshot the registry generation before running discovery. If
         // another counter type is registered concurrently while discovery
@@ -130,8 +136,12 @@ namespace hpx::util {
         // Each call below gets its own lightweight error_code and is
         // logged at debug level rather than thrown, so a genuine failure
         // (for instance an AGAS resolution problem) stays visible without
-        // aborting the pending evaluation.
+        // aborting the pending evaluation. Discovery is still tracked as
+        // failed in that case, below, so that the generation snapshot
+        // taken above is not cached and the missed counter(s) are retried
+        // on the next evaluation instead of being forgotten for good.
         std::size_t const size_before = counters_.size();
+        bool success = true;
 
         if (!names_.empty())
         {
@@ -139,6 +149,7 @@ namespace hpx::util {
             counters_.add_counters(names_, false, ec);
             if (ec)
             {
+                success = false;
                 LPCS_(debug).format(
                     "query_counters::refresh_counters: failed to refresh "
                     "counters ({})",
@@ -151,6 +162,7 @@ namespace hpx::util {
             counters_.add_counters(reset_names_, true, ec);
             if (ec)
             {
+                success = false;
                 LPCS_(debug).format(
                     "query_counters::refresh_counters: failed to refresh "
                     "reset counters ({})",
@@ -158,13 +170,22 @@ namespace hpx::util {
             }
         }
 
-        last_known_generation_.store(
-            current_generation, std::memory_order_relaxed);
-
         std::vector<performance_counters::counter_info> const infos =
             counters_.get_counter_infos();
         if (infos.size() <= size_before)
-            return;    // nothing new was discovered
+        {
+            // Only cache a generation that discovery fully covered. If
+            // either add_counters() call above failed, storing
+            // current_generation here would let a later periodic
+            // evaluate() skip discovery while the requested counter is
+            // still missing (see review discussion on #7562).
+            if (success)
+            {
+                last_known_generation_.store(
+                    current_generation, std::memory_order_relaxed);
+            }
+            return success;    // nothing new was discovered
+        }
 
         // Only the newly discovered counters, at indices
         // [size_before, infos.size()), need to be started; the rest were
@@ -173,6 +194,7 @@ namespace hpx::util {
         counters_.start(launch::sync, size_before, ec2);
         if (ec2)
         {
+            success = false;
             LPCS_(debug).format(
                 "query_counters::refresh_counters: failed to start newly "
                 "discovered counters ({})",
@@ -185,6 +207,20 @@ namespace hpx::util {
                 performance_counters::remove_counter_prefix(infos[i].fullname_);
             hpx::tracing::create_counter(infos[i].fullname_, real_name);
         }
+
+        // Only cache a generation that discovery, including starting any
+        // newly found counters, fully covered end to end. If any step
+        // above failed, storing current_generation here would let a
+        // later periodic evaluate() skip re-discovery while the
+        // requested counter is still missing or unstarted (see review
+        // discussion on #7562).
+        if (success)
+        {
+            last_known_generation_.store(
+                current_generation, std::memory_order_relaxed);
+        }
+
+        return success;
     }
 
     void query_counters::start()
@@ -201,15 +237,26 @@ namespace hpx::util {
 #pragma GCC diagnostic pop
 #endif
 
-        find_counters();
+        // Snapshot the registry generation *before* find_counters() runs
+        // below, not after: a counter type registered concurrently while
+        // find_counters() is in flight must still be visible as "newer
+        // than what we've observed" to the generation check in
+        // evaluate_counters(), otherwise it could be acknowledged here
+        // without ever having actually been examined by discovery.
+        std::uint64_t const generation_before_discovery =
+            performance_counters::registry::instance().generation();
 
-        // Snapshot the registry generation observed by find_counters()
-        // above, so the first periodic evaluate() doesn't immediately
-        // pay for a redundant refresh_counters() call for counter types
-        // that were already picked up here.
-        last_known_generation_.store(
-            performance_counters::registry::instance().generation(),
-            std::memory_order_relaxed);
+        bool const discovered = find_counters();
+
+        // Only cache the snapshot above when discovery fully succeeded,
+        // for the same reason refresh_counters() only caches its own
+        // snapshot on success: otherwise a partially failed discovery at
+        // start() could be mistaken for "up to date" and never retried.
+        if (discovered)
+        {
+            last_known_generation_.store(
+                generation_before_discovery, std::memory_order_relaxed);
+        }
 
         counters_.start(launch::sync);
 
