@@ -11,6 +11,19 @@
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/testing.hpp>
 
+// Included explicitly and directly, rather than relying on
+// hpx/modules/execution.hpp to transitively provide them: under this
+// build's configuration (standard execution policies / stdexec enabled),
+// that module header does not pull in the classic
+// hpx/executors/execution_policy.hpp path, which is exactly what caused
+// hpx::execution::parallel_policy and hpx::execution::sequenced_executor
+// to disappear from view in the first place. Depending on transitive
+// inclusion here would just reproduce the same class of failure for
+// parallel_policy_shim, parallel_executor, and sequenced_executor.
+#include <hpx/executors/execution_policy.hpp>
+#include <hpx/executors/parallel_executor.hpp>
+#include <hpx/executors/sequenced_executor.hpp>
+
 #include <type_traits>
 
 namespace exd = hpx::execution::detail;
@@ -20,12 +33,29 @@ namespace exd = hpx::execution::detail;
 // policy that derives from hpx::execution::detail::execution_policy.
 namespace default_customization_point_tests {
 
-    using policy_type = hpx::execution::parallel_policy;
+    // hpx::execution::parallel_policy is a public alias that gets
+    // redirected away from HPX's own implementation when standard
+    // execution policies are enabled (see
+    // hpx/execution_base/stdexec_forward.hpp), and the type it gets
+    // redirected to does not provide HPX's rebind<Executor, Parameters>
+    // contract. The underlying HPX implementation that
+    // hpx::execution::parallel_policy itself aliases to on non-stdexec
+    // builds is exd::parallel_policy_shim<Executor, Parameters>, defined
+    // unconditionally (no HPX_HAVE_STDEXEC guard) in
+    // hpx/executors/execution_policy.hpp; using it directly, together
+    // with HPX's real hpx::execution::parallel_executor /
+    // hpx::execution::sequenced_executor classes (as opposed to the
+    // policy aliases), keeps this test meaningful regardless of whether
+    // standard execution policies are enabled.
+    using policy_type =
+        exd::parallel_policy_shim<hpx::execution::parallel_executor,
+            hpx::traits::executor_parameters_type_t<
+                hpx::execution::parallel_executor>>;
     using new_executor_type = hpx::execution::sequenced_executor;
     using new_parameters_type = hpx::execution::experimental::static_chunk_size;
 
     // sequenced_executor's category (sequenced_execution_tag) is not
-    // weaker than parallel_policy's (parallel_execution_tag), so this
+    // weaker than parallel_executor's (parallel_execution_tag), so this
     // rebind satisfies the same safety check as
     // hpx::execution::experimental::rebind_executor.
     static_assert(hpx::execution::experimental::detail::is_not_weaker_v<
