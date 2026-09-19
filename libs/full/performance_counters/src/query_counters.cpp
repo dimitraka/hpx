@@ -578,7 +578,30 @@ namespace hpx::util {
         if (get_config_entry("hpx.print_counter.reset", "0") == "1")
             reset = true;
 
-        return evaluate_counters(reset, nullptr, force);
+        evaluate_counters(reset, nullptr, force);
+
+        // Note: deliberately not forwarding evaluate_counters()'s return
+        // value here. This function is only ever invoked as the periodic
+        // callback driving interval_timer (see the constructor), which
+        // treats a `false` return as "nothing more to do, stop
+        // rescheduling for good" (interval_timer::evaluate()). Before
+        // #4627, a counter set that matched nothing was assumed to never
+        // match anything later, so tying the two together was harmless.
+        // That assumption no longer holds: a wild-card pattern (e.g.
+        // /apex/*) can legitimately match zero counters at first and gain
+        // matches later, once its provider registers them (see
+        // refresh_counters()). If this function forwarded a `false`
+        // result from an early, empty evaluation, interval_timer would
+        // mark itself terminated immediately, and every subsequent
+        // non-forced evaluate_counters() call would then short-circuit on
+        // its `timer_.is_terminated()` check before refresh_counters()
+        // ever ran again, permanently hiding any counter registered
+        // after that point. Always returning true keeps the periodic
+        // timer alive; it is still stopped correctly, and only
+        // intentionally, via stop_evaluating_counters(true) or runtime
+        // shutdown, both of which call interval_timer::terminate()
+        // directly rather than going through this return value.
+        return true;
     }
 
     void query_counters::terminate() {}
