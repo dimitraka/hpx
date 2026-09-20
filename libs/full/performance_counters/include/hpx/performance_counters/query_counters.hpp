@@ -64,11 +64,12 @@ namespace hpx::util {
         /// \brief Resolve the counter names this object was constructed
         ///        with.
         ///
-        /// \returns false if any of the requested (non-empty) name lists
-        ///          failed to resolve without error; true otherwise. A
-        ///          wild-card pattern that legitimately matches nothing yet
-        ///          still counts as success (see #4627).
-        bool find_counters();
+        /// Throws (or sets \a ec, for the counters_.add_counters()
+        /// overloads that take one) if any of the requested (non-empty)
+        /// name lists fails to resolve, e.g. an invalid exact counter name
+        /// or a malformed pattern. A wild-card pattern that legitimately
+        /// matches nothing yet is not treated as a failure (see #4627).
+        void find_counters();
 
         /// \brief Re-run discovery for the counter names this object was
         ///        constructed with and merge any newly found counters into

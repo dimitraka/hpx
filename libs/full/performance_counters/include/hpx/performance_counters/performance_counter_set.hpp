@@ -18,7 +18,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <set>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -141,9 +141,12 @@ namespace hpx::performance_counters {
         std::vector<counter_info> infos_;    // counter instance names
         std::vector<hpx::id_type> ids_;      // global ids of counter instances
         std::vector<std::uint8_t> reset_;    // != 0 if counter should be reset
-        std::set<std::string> known_names_;    // fullnames already in infos_,
-                                               // kept in sync for O(log N)
-                                               // duplicate detection
+
+        // fullnames already in infos_ mapped to their index in infos_/ids_/
+        // reset_, kept in sync for O(log N) duplicate detection and so a
+        // later discovery requesting reset() for an already-known counter
+        // can promote its reset_ entry in place.
+        std::map<std::string, std::size_t> known_names_;
 
         mutable std::uint64_t invocation_count_;
         bool print_counters_locally_;    // handle only local counters

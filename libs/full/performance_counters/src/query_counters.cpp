@@ -75,40 +75,23 @@ namespace hpx::util {
         counters_.release();
     }
 
-    bool query_counters::find_counters()
+    void query_counters::find_counters()
     {
-        // A wild-card pattern legitimately matching no counter type yet,
+        // performance_counter_set::add_counters() already tolerates a
+        // wild-card pattern that legitimately matches no counter type yet,
         // e.g. because its provider has not registered one at this point
-        // (see #4627), must not abort start() with the default ec
-        // (throws). This mirrors the lightweight handling
-        // refresh_counters() already uses for the same reason.
-        bool success = true;
-
+        // (see #4627): that case never raises ec. Anything that does raise
+        // ec here is therefore a genuine problem -- an invalid exact
+        // counter name, a malformed pattern, or a discovery failure -- and
+        // must be surfaced to the caller the same way it was before #4627,
+        // instead of being downgraded to a log message.
         if (!names_.empty())
         {
-            error_code ec(throwmode::lightweight);
-            counters_.add_counters(names_, false, ec);
-            if (ec)
-            {
-                success = false;
-                LPCS_(debug).format(
-                    "query_counters::find_counters: failed to discover "
-                    "counters ({})",
-                    ec.get_message());
-            }
+            counters_.add_counters(names_);
         }
         if (!reset_names_.empty())
         {
-            error_code ec(throwmode::lightweight);
-            counters_.add_counters(reset_names_, true, ec);
-            if (ec)
-            {
-                success = false;
-                LPCS_(debug).format(
-                    "query_counters::find_counters: failed to discover "
-                    "reset counters ({})",
-                    ec.get_message());
-            }
+            counters_.add_counters(reset_names_, true);
         }
 
         for (auto const& info : counters_.get_counter_infos())
@@ -117,8 +100,6 @@ namespace hpx::util {
                 performance_counters::remove_counter_prefix(info.fullname_);
             hpx::tracing::create_counter(info.fullname_, real_name);
         }
-
-        return success;
     }
 
     bool query_counters::refresh_counters()
@@ -181,8 +162,12 @@ namespace hpx::util {
             // still missing (see review discussion on #7562).
             if (success)
             {
+                // Release-store so that a concurrent evaluate_counters()
+                // acquire-loading this same generation is guaranteed to
+                // also see the (mutex-protected) counter set discovery
+                // above has already populated.
                 last_known_generation_.store(
-                    current_generation, std::memory_order_relaxed);
+                    current_generation, std::memory_order_release);
             }
             return success;    // nothing new was discovered
         }
@@ -216,8 +201,10 @@ namespace hpx::util {
         // discussion on #7562).
         if (success)
         {
+            // See the release-store above for why this must not be
+            // memory_order_relaxed.
             last_known_generation_.store(
-                current_generation, std::memory_order_relaxed);
+                current_generation, std::memory_order_release);
         }
 
         return success;
@@ -246,17 +233,19 @@ namespace hpx::util {
         std::uint64_t const generation_before_discovery =
             performance_counters::registry::instance().generation();
 
-        bool const discovered = find_counters();
+        // find_counters() throws on a genuine discovery failure (invalid
+        // exact name, malformed pattern, ...), so reaching the line below
+        // already implies discovery of everything requested succeeded; a
+        // wild-card pattern matching nothing yet is not a failure (see
+        // #4627) and does not prevent caching this snapshot.
+        find_counters();
 
-        // Only cache the snapshot above when discovery fully succeeded,
-        // for the same reason refresh_counters() only caches its own
-        // snapshot on success: otherwise a partially failed discovery at
-        // start() could be mistaken for "up to date" and never retried.
-        if (discovered)
-        {
-            last_known_generation_.store(
-                generation_before_discovery, std::memory_order_relaxed);
-        }
+        // Release-store so that a concurrent evaluate_counters()
+        // acquire-loading this same generation is guaranteed to also see
+        // the (mutex-protected) counter set find_counters() just
+        // populated.
+        last_known_generation_.store(
+            generation_before_discovery, std::memory_order_release);
 
         counters_.start(launch::sync);
 
@@ -830,7 +819,7 @@ namespace hpx::util {
             performance_counters::registry::instance().generation();
         if (force ||
             current_generation !=
-                last_known_generation_.load(std::memory_order_relaxed))
+                last_known_generation_.load(std::memory_order_acquire))
         {
             refresh_counters();
         }
