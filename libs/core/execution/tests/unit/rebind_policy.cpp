@@ -109,7 +109,7 @@ namespace default_customization_point_tests {
             new_parameters_type>;
 
     using rebound_both_axes_combined =
-        typename policy_type::template rebind<new_executor_type,
+        policy_type::template rebind<new_executor_type,
             new_parameters_type>::type;
 
     static_assert(std::is_same_v<rebound_both_axes_separately,
