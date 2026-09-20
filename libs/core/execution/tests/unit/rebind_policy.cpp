@@ -11,18 +11,15 @@
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/testing.hpp>
 
-// Included explicitly and directly, rather than relying on
-// hpx/modules/execution.hpp to transitively provide them: under this
-// build's configuration (standard execution policies / stdexec enabled),
-// that module header does not pull in the classic
-// hpx/executors/execution_policy.hpp path, which is exactly what caused
-// hpx::execution::parallel_policy and hpx::execution::sequenced_executor
-// to disappear from view in the first place. Depending on transitive
-// inclusion here would just reproduce the same class of failure for
-// parallel_policy_shim, parallel_executor, and sequenced_executor.
-#include <hpx/executors/execution_policy.hpp>
-#include <hpx/executors/parallel_executor.hpp>
-#include <hpx/executors/sequenced_executor.hpp>
+// hpx::execution::detail::parallel_policy_shim,
+// hpx::execution::parallel_executor, and hpx::execution::sequenced_executor
+// live in the executors module, not the execution module, so
+// hpx/modules/execution.hpp does not transitively provide them. Pulling
+// them in through the executors module's own generated header, rather
+// than including the raw hpx/executors headers directly, keeps this
+// working under the C++20 modules build, where those raw headers are
+// already brought in through the module import.
+#include <hpx/modules/executors.hpp>
 
 #include <type_traits>
 
