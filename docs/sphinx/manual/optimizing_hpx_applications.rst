@@ -3634,6 +3634,10 @@ On Windows, |hpx| additionally sets ``TRACY_DBGHELP_LOCK=HpxDbgHelp`` on
 the built Tracy client so DbgHelp calls from Tracy and from |hpx|'s own
 symbol lookup share a single mutex (DbgHelp is single-threaded per MSDN).
 
+Scheduler zones no longer carry callstacks. The captured frames were the
+scheduler-dispatch path itself, identical for every task, and the zone
+name and phase already identify the work.
+
 To profile a distributed run, additionally enable
 :option:`HPX_WITH_PARCEL_PROFILING`\ ``=ON`` so per-parcel identifiers are
 carried on the wire and the ``send_parcel`` / ``recv_parcel`` /
