@@ -35,7 +35,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/execution/executors/rebind_executor.hpp>
+#include <hpx/modules/execution.hpp>
 
 #include <type_traits>
 
