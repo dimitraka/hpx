@@ -5,8 +5,8 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-set(tests discover_counters_1787 registry_thread_safety_7563 statistics_2666
-          uptime_1737
+set(tests discover_counters_1787 late_counter_registration_4627
+          registry_thread_safety_7563 statistics_2666 uptime_1737
 )
 
 set(registry_thread_safety_7563_PARAMETERS THREADS_PER_LOCALITY 4)
