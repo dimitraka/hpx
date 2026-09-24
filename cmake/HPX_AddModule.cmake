@@ -206,10 +206,7 @@ function(add_hpx_module libname modulename)
             set(autolink_lib_name "hpx")
           endif()
         endif()
-        set(autolink_guard "\n#if defined(HPX_HAVE_STATIC_LINKING) && \\\n")
-        set(autolink_guard
-            "${autolink_guard}    !defined(HPX_${libname_upper}_EXPORTS)\n"
-        )
+        set(autolink_guard "\n#if !defined(HPX_${libname_upper}_EXPORTS)\n")
         set(autolink_define
             "#define HPX_AUTOLINK_LIB_NAME \"${autolink_lib_name}\"\n"
         )
