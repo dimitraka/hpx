@@ -36,8 +36,8 @@ namespace hpx::serialization {
 
     HPX_CXX_CORE_EXPORT struct serialization_chunk
     {
-        chunk_data data_;       // index or pointer
-        std::size_t size_;      // size of serialization_chunk starting pos_
+        chunk_data data_;     // index or pointer
+        std::size_t size_;    // size of serialization_chunk starting pos_
         // Optional RDMA remote key for parcelport memory registration.
         // Reserved for one-sided RDMA parcelports; currently unused (always 0).
         std::uint64_t rkey_;

@@ -259,10 +259,9 @@ void test_long_vector_serialization()
         bool saw_original_storage = false;
         for (auto const& c : chunks)
         {
-            if (c.type_ ==
-                    hpx::serialization::chunk_type::chunk_type_pointer ||
-                c.type_ == hpx::serialization::chunk_type::
-                               chunk_type_const_pointer)
+            if (c.type_ == hpx::serialization::chunk_type::chunk_type_pointer ||
+                c.type_ ==
+                    hpx::serialization::chunk_type::chunk_type_const_pointer)
             {
                 ++pointer_chunks;
                 if (c.data() == static_cast<void const*>(os.data()) &&
@@ -290,9 +289,8 @@ void test_long_vector_serialization()
     // Below the threshold the archive must copy into the main buffer and
     // must not emit a pointer chunk for the vector payload.
     {
-        std::vector<T> small(
-            (std::max)(std::size_t(1),
-                HPX_ZERO_COPY_SERIALIZATION_THRESHOLD / sizeof(T) / 2));
+        std::vector<T> small((std::max) (std::size_t(1),
+            HPX_ZERO_COPY_SERIALIZATION_THRESHOLD / sizeof(T) / 2));
         std::iota(small.begin(), small.end(), T());
 
         std::vector<char> buffer;
@@ -302,10 +300,10 @@ void test_long_vector_serialization()
 
         for (auto const& c : chunks)
         {
+            HPX_TEST(
+                c.type_ != hpx::serialization::chunk_type::chunk_type_pointer);
             HPX_TEST(c.type_ !=
-                hpx::serialization::chunk_type::chunk_type_pointer);
-            HPX_TEST(c.type_ != hpx::serialization::chunk_type::
-                                    chunk_type_const_pointer);
+                hpx::serialization::chunk_type::chunk_type_const_pointer);
         }
 
         std::size_t const size = oarchive.bytes_written();
