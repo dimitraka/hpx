@@ -291,14 +291,14 @@ void test_long_vector_serialization()
     // Below the threshold the archive must copy into the main buffer and
     // must not emit a pointer chunk for the vector payload.
     {
-        std::vector<T> small((std::max) (std::size_t(1),
+        std::vector<T> below_threshold((std::max) (std::size_t(1),
             HPX_ZERO_COPY_SERIALIZATION_THRESHOLD / sizeof(T) / 2));
-        std::iota(small.begin(), small.end(), T());
+        std::iota(below_threshold.begin(), below_threshold.end(), T());
 
         std::vector<char> buffer;
         std::vector<hpx::serialization::serialization_chunk> chunks;
         hpx::serialization::output_archive oarchive(buffer, 0, &chunks);
-        oarchive << small;
+        oarchive << below_threshold;
 
         for (auto const& c : chunks)
         {
@@ -312,9 +312,9 @@ void test_long_vector_serialization()
         hpx::serialization::input_archive iarchive(buffer, size, &chunks);
         std::vector<T> is;
         iarchive >> is;
-        HPX_TEST_EQ(small.size(), is.size());
-        for (std::size_t i = 0; i < small.size(); ++i)
-            HPX_TEST_EQ(small[i], is[i]);
+        HPX_TEST_EQ(below_threshold.size(), is.size());
+        for (std::size_t i = 0; i < below_threshold.size(); ++i)
+            HPX_TEST_EQ(below_threshold[i], is[i]);
     }
 }
 
