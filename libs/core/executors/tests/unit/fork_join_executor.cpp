@@ -572,20 +572,6 @@ int hpx_main()
         }
     }
 
-    // Leaf helper: nostack + static_ schedule (#3348 slice). Do not nest a
-    // second fork_join_executor while this one is alive.
-    {
-        count1 = 0;
-        constexpr std::size_t n = 107;
-        std::vector<int> v(n);
-        std::iota(std::begin(v), std::end(v), std::rand());
-
-        auto exec =
-            hpx::execution::experimental::make_leaf_fork_join_executor();
-        hpx::parallel::execution::bulk_sync_execute(exec, &bulk_test, v, 42);
-        HPX_TEST_EQ(count1.load(), n);
-    }
-
     return hpx::local::finalize();
 }
 

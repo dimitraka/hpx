@@ -1409,23 +1409,6 @@ namespace hpx::execution::experimental {
         /// \endcond
     };
 
-    /// Create a leaf / non-suspending fork_join_executor for bulk parallel_for
-    /// style work (#3348). Forces \c nostack workers and defaults to
-    /// \c loop_schedule::static_ (fixed partitions, no shared index queue).
-    /// Leaf bodies must not suspend (nested \c async / \c future::get /
-    /// \c this_thread::suspend). Pass \c loop_schedule::dynamic if steal is
-    /// needed.
-    HPX_CXX_CORE_EXPORT [[nodiscard]] inline fork_join_executor
-    make_leaf_fork_join_executor(
-        threads::thread_priority priority = threads::thread_priority::bound,
-        fork_join_executor::loop_schedule sched =
-            fork_join_executor::loop_schedule::static_,
-        std::chrono::nanoseconds yield_delay = std::chrono::microseconds(300))
-    {
-        return fork_join_executor(
-            priority, threads::thread_stacksize::nostack, sched, yield_delay);
-    }
-
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT std::ostream& operator<<(
         std::ostream& os, fork_join_executor::loop_schedule schedule);
 
