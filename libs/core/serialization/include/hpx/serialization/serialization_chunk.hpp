@@ -38,9 +38,10 @@ namespace hpx::serialization {
     {
         chunk_data data_;       // index or pointer
         std::size_t size_;      // size of serialization_chunk starting pos_
-        std::uint64_t rkey_;    // optional RDMA remote key for parcelport
-                                // operations
-        chunk_type type_;       // chunk_type
+        // Optional RDMA remote key for parcelport memory registration.
+        // Reserved for one-sided RDMA parcelports; currently unused (always 0).
+        std::uint64_t rkey_;
+        chunk_type type_;    // chunk_type
 
         [[nodiscard]] constexpr void const* data() const noexcept
         {
@@ -70,13 +71,26 @@ namespace hpx::serialization {
         return retval;
     }
 
+    /// Zero-copy chunk referring to immutable caller-owned memory (save path).
+    /// Parcelports must treat this like \c chunk_type_pointer for transmission.
     HPX_CXX_CORE_EXPORT [[nodiscard]] constexpr serialization_chunk
-    create_pointer_chunk(
+    create_const_pointer_chunk(
         void const* pos, std::size_t size, std::uint64_t rkey = 0) noexcept
     {
         serialization_chunk retval = {
-            {0}, size, rkey, chunk_type::chunk_type_pointer};
+            {0}, size, rkey, chunk_type::chunk_type_const_pointer};
         retval.data_.cpos_ = pos;
+        return retval;
+    }
+
+    /// Zero-copy chunk referring to mutable memory (typically receive path).
+    HPX_CXX_CORE_EXPORT [[nodiscard]] constexpr serialization_chunk
+    create_pointer_chunk(
+        void* pos, std::size_t size, std::uint64_t rkey = 0) noexcept
+    {
+        serialization_chunk retval = {
+            {0}, size, rkey, chunk_type::chunk_type_pointer};
+        retval.data_.pos_ = pos;
         return retval;
     }
 }    // namespace hpx::serialization

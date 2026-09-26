@@ -269,7 +269,10 @@ namespace hpx::parcelset::policies::lcw {
         {
             serialization::serialization_chunk& chunk =
                 buffer_.chunks_[send_chunks_idx];
-            if (chunk.type_ == serialization::chunk_type::chunk_type_pointer)
+            // Accept both pointer chunk kinds (save uses const_pointer; #812).
+            if (chunk.type_ == serialization::chunk_type::chunk_type_pointer ||
+                chunk.type_ ==
+                    serialization::chunk_type::chunk_type_const_pointer)
             {
                 state.store(
                     connection_state::locked, std::memory_order_relaxed);
