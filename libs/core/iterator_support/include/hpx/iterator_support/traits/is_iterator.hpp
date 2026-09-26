@@ -294,7 +294,15 @@ namespace hpx::traits {
 
     ///////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT template <typename Iter, typename Enable = void>
-    struct is_output_iterator
+    struct is_output_iterator : std::false_type
+    {
+    };
+
+    // Guard the iter_category_t check behind is_iterator so that evaluating
+    // is_output_iterator_v (and the output_iterator concept) for a non-iterator
+    // yields false instead of a hard error.
+    template <typename Iter>
+    struct is_output_iterator<Iter, std::enable_if_t<is_iterator_v<Iter>>>
       : std::integral_constant<bool,
             belongs_to_iterator_category_v<Iter, std::output_iterator_tag> ||
                 (belongs_to_iterator_traversal_v<Iter,

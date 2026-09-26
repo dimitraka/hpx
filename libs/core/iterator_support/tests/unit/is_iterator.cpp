@@ -1173,6 +1173,7 @@ static_assert(!hpx::traits::bidirectional_iterator<
 
 static_assert(hpx::traits::input_iterator<std::istream_iterator<int>>);
 static_assert(hpx::traits::output_iterator<std::ostream_iterator<int>>);
+static_assert(!hpx::traits::output_iterator<int>);
 
 static_assert(!hpx::traits::zip_iterator<typename std::vector<int>::iterator>);
 static_assert(hpx::traits::zip_iterator<typename std::vector<int>::iterator> ==
