@@ -169,8 +169,7 @@ namespace hpx::parcelset::policies::tcp {
                         c.type_ ==
                             serialization::chunk_type::chunk_type_const_pointer)
                     {
-                        buffers.emplace_back(
-                            std::as_const(c).data(), c.size_);
+                        buffers.emplace_back(std::as_const(c).data(), c.size_);
                     }
                 }
             }
