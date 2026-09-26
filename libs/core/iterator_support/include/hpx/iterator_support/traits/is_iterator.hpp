@@ -299,8 +299,8 @@ namespace hpx::traits {
     };
 
     // Guard the iter_category_t check behind is_iterator so that evaluating
-    // is_output_iterator_v (and the output_iterator concept) for a non-iterator
-    // yields false instead of a hard error.
+    // is_output_iterator_v for a non-iterator yields false instead of a hard
+    // error.
     template <typename Iter>
     struct is_output_iterator<Iter, std::enable_if_t<is_iterator_v<Iter>>>
       : std::integral_constant<bool,
@@ -397,31 +397,5 @@ namespace hpx::traits {
 
     HPX_CXX_CORE_EXPORT template <typename Iter>
     inline constexpr bool is_zip_iterator_v = is_zip_iterator<Iter>::value;
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Companion concepts for the HPX iterator category traits. These wrap the
-    // HPX-specific traits (including Boost traversal tags) and are not aliases
-    // of the corresponding std::*_iterator concepts. Defined in hpx::traits
-    // so names such as zip_iterator do not collide with hpx::util::zip_iterator.
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    concept iterator = is_iterator_v<Iter>;
-
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    concept output_iterator = is_output_iterator_v<Iter>;
-
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    concept input_iterator = is_input_iterator_v<Iter>;
-
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    concept forward_iterator = is_forward_iterator_v<Iter>;
-
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    concept bidirectional_iterator = is_bidirectional_iterator_v<Iter>;
-
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    concept random_access_iterator = is_random_access_iterator_v<Iter>;
-
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    concept zip_iterator = is_zip_iterator_v<Iter>;
 
 }    // namespace hpx::traits
