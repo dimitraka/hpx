@@ -146,8 +146,8 @@ benchmark).
   loops, reducing overhead and improving performance.
 * For bulk leaf regions that must not suspend, use
   ``hpx::execution::experimental::make_leaf_fork_join_executor()`` (``nostack``
-  workers with ``loop_schedule::shared``: one atomic chunk index for all
-  workers). Recursive ``hpx::async`` trees are out of scope for that helper
+  workers with ``loop_schedule::static_`` by default; pass ``dynamic`` if steal
+  is needed). Recursive ``hpx::async`` trees are out of scope for that helper
   (see `#3348 <https://github.com/TheHPXProject/hpx/issues/3348>`_).
 
 In studies, the fork-join executor achieved significant speedups, in some cases

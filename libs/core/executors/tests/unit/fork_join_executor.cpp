@@ -563,7 +563,6 @@ int hpx_main()
             for (auto const schedule : {
                      fork_join_executor::loop_schedule::static_,
                      fork_join_executor::loop_schedule::dynamic,
-                     fork_join_executor::loop_schedule::shared,
                  })
             {
                 {
@@ -573,7 +572,7 @@ int hpx_main()
         }
     }
 
-    // Leaf helper: nostack + shared schedule (#3348 slice). Do not nest a
+    // Leaf helper: nostack + static_ schedule (#3348 slice). Do not nest a
     // second fork_join_executor while this one is alive.
     {
         count1 = 0;

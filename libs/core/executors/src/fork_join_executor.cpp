@@ -23,9 +23,6 @@ namespace hpx::execution::experimental {
         case fork_join_executor::loop_schedule::dynamic:
             os << "dynamic";
             break;
-        case fork_join_executor::loop_schedule::shared:
-            os << "shared";
-            break;
         default:
             os << "<unknown>";
             break;
