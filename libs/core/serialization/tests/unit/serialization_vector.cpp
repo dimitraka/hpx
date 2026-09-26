@@ -259,9 +259,9 @@ void test_long_vector_serialization()
         bool saw_original_storage = false;
         for (auto const& c : chunks)
         {
-            if (c.type_ == hpx::serialization::chunk_type::chunk_type_pointer ||
-                c.type_ ==
-                    hpx::serialization::chunk_type::chunk_type_const_pointer)
+            // Save path must emit const-pointer chunks for vector storage.
+            if (c.type_ ==
+                hpx::serialization::chunk_type::chunk_type_const_pointer)
             {
                 ++pointer_chunks;
                 if (c.data() == static_cast<void const*>(os.data()) &&
@@ -270,6 +270,8 @@ void test_long_vector_serialization()
                     saw_original_storage = true;
                 }
             }
+            HPX_TEST(
+                c.type_ != hpx::serialization::chunk_type::chunk_type_pointer);
         }
 
         HPX_TEST_EQ(pointer_chunks, std::size_t(1));
