@@ -48,11 +48,11 @@ static_assert(hpx::traits::ref_wrapped_future_range<
 static_assert(
     !hpx::traits::ref_wrapped_future_range<std::vector<hpx::future<int>>>);
 
-static_assert(
-    hpx::traits::future_tuple<hpx::tuple<hpx::future<int>, hpx::future<double>>>);
+static_assert(hpx::traits::future_tuple<
+    hpx::tuple<hpx::future<int>, hpx::future<double>>>);
 static_assert(!hpx::traits::future_tuple<hpx::tuple<int, double>>);
-static_assert(
-    hpx::traits::future_tuple<hpx::tuple<hpx::future<int>, hpx::future<double>>> ==
+static_assert(hpx::traits::future_tuple<
+                  hpx::tuple<hpx::future<int>, hpx::future<double>>> ==
     hpx::traits::is_future_tuple_v<
         hpx::tuple<hpx::future<int>, hpx::future<double>>>);
 

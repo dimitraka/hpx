@@ -59,8 +59,7 @@ constexpr bool check_policy_traits()
     static_assert(
         hpx::unsequenced_execution_policy<Policy> == ExpectUnsequenced);
     static_assert(hpx::async_execution_policy<Policy> == ExpectAsync);
-    static_assert(
-        hpx::vectorpack_execution_policy<Policy> == ExpectVectorpack);
+    static_assert(hpx::vectorpack_execution_policy<Policy> == ExpectVectorpack);
 
     return true;
 }
