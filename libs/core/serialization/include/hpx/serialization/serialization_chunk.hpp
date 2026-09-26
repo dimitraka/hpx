@@ -43,18 +43,26 @@ namespace hpx::serialization {
         std::uint64_t rkey_;
         chunk_type type_;    // chunk_type
 
+        /// Active union member depends on \a type_: use this for both
+        /// pointer kinds (mutable storage is returned as \c void const*).
         [[nodiscard]] constexpr void const* data() const noexcept
         {
             HPX_ASSERT(type_ == chunk_type::chunk_type_pointer ||
                 type_ == chunk_type::chunk_type_const_pointer);
-            return data_.cpos_;
-        }
-        [[nodiscard]] constexpr void* data() noexcept
-        {
-            HPX_ASSERT(type_ == chunk_type::chunk_type_pointer ||
-                type_ == chunk_type::chunk_type_const_pointer);
+            if (type_ == chunk_type::chunk_type_const_pointer)
+            {
+                return data_.cpos_;
+            }
             return data_.pos_;
         }
+
+        /// Mutable view; only valid for \c chunk_type_pointer chunks.
+        [[nodiscard]] constexpr void* data() noexcept
+        {
+            HPX_ASSERT(type_ == chunk_type::chunk_type_pointer);
+            return data_.pos_;
+        }
+
         [[nodiscard]] constexpr std::size_t size() const noexcept
         {
             return size_;
@@ -92,5 +100,14 @@ namespace hpx::serialization {
             {0}, size, rkey, chunk_type::chunk_type_pointer};
         retval.data_.pos_ = pos;
         return retval;
+    }
+
+    /// Backward-compatible overload for const storage; same as
+    /// \c create_const_pointer_chunk.
+    HPX_CXX_CORE_EXPORT [[nodiscard]] constexpr serialization_chunk
+    create_pointer_chunk(
+        void const* pos, std::size_t size, std::uint64_t rkey = 0) noexcept
+    {
+        return create_const_pointer_chunk(pos, size, rkey);
     }
 }    // namespace hpx::serialization
