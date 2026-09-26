@@ -1147,6 +1147,40 @@ void is_random_access_iterator_test()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Companion concepts must agree with the corresponding is_*_v traits for a
+// representative set of iterator categories.
+static_assert(hpx::traits::iterator<typename std::vector<int>::iterator>);
+static_assert(hpx::traits::iterator<typename std::vector<int>::iterator> ==
+    hpx::traits::is_iterator_v<typename std::vector<int>::iterator>);
+static_assert(!hpx::traits::iterator<int>);
+
+static_assert(
+    hpx::traits::random_access_iterator<typename std::vector<int>::iterator>);
+static_assert(
+    hpx::traits::random_access_iterator<typename std::vector<int>::iterator> ==
+    hpx::traits::is_random_access_iterator_v<
+        typename std::vector<int>::iterator>);
+
+static_assert(
+    hpx::traits::bidirectional_iterator<typename std::list<int>::iterator>);
+static_assert(
+    !hpx::traits::random_access_iterator<typename std::list<int>::iterator>);
+
+static_assert(
+    hpx::traits::forward_iterator<typename std::forward_list<int>::iterator>);
+static_assert(!hpx::traits::bidirectional_iterator<
+    typename std::forward_list<int>::iterator>);
+
+static_assert(hpx::traits::input_iterator<std::istream_iterator<int>>);
+static_assert(hpx::traits::output_iterator<std::ostream_iterator<int>>);
+
+static_assert(
+    !hpx::traits::zip_iterator<typename std::vector<int>::iterator>);
+static_assert(
+    hpx::traits::zip_iterator<typename std::vector<int>::iterator> ==
+    hpx::traits::is_zip_iterator_v<typename std::vector<int>::iterator>);
+
+///////////////////////////////////////////////////////////////////////////////
 int main()
 {
     {

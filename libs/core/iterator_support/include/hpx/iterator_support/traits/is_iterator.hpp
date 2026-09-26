@@ -1,5 +1,6 @@
 //  Copyright (c) 2007-2025 Hartmut Kaiser
 //  Copyright (c) 2019 Austin McCartney
+//  Copyright (c) 2026 the-ivii
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -388,5 +389,31 @@ namespace hpx::traits {
 
     HPX_CXX_CORE_EXPORT template <typename Iter>
     inline constexpr bool is_zip_iterator_v = is_zip_iterator<Iter>::value;
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Companion concepts for the HPX iterator category traits. These wrap the
+    // HPX-specific traits (including Boost traversal tags) and are not aliases
+    // of the corresponding std::*_iterator concepts. Defined in hpx::traits
+    // so names such as zip_iterator do not collide with hpx::util::zip_iterator.
+    HPX_CXX_CORE_EXPORT template <typename Iter>
+    concept iterator = is_iterator_v<Iter>;
+
+    HPX_CXX_CORE_EXPORT template <typename Iter>
+    concept output_iterator = is_output_iterator_v<Iter>;
+
+    HPX_CXX_CORE_EXPORT template <typename Iter>
+    concept input_iterator = is_input_iterator_v<Iter>;
+
+    HPX_CXX_CORE_EXPORT template <typename Iter>
+    concept forward_iterator = is_forward_iterator_v<Iter>;
+
+    HPX_CXX_CORE_EXPORT template <typename Iter>
+    concept bidirectional_iterator = is_bidirectional_iterator_v<Iter>;
+
+    HPX_CXX_CORE_EXPORT template <typename Iter>
+    concept random_access_iterator = is_random_access_iterator_v<Iter>;
+
+    HPX_CXX_CORE_EXPORT template <typename Iter>
+    concept zip_iterator = is_zip_iterator_v<Iter>;
 
 }    // namespace hpx::traits
