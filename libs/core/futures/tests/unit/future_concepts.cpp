@@ -18,41 +18,40 @@
 #include <vector>
 
 ///////////////////////////////////////////////////////////////////////////
-static_assert(hpx::traits::future<hpx::future<int>>);
-static_assert(hpx::traits::future<hpx::shared_future<int>>);
-static_assert(!hpx::traits::future<int>);
-static_assert(hpx::traits::future<hpx::future<int>> ==
+static_assert(hpx::future_type<hpx::future<int>>);
+static_assert(hpx::future_type<hpx::shared_future<int>>);
+static_assert(!hpx::future_type<int>);
+static_assert(hpx::future_type<hpx::future<int>> ==
     hpx::traits::is_future_v<hpx::future<int>>);
-static_assert(hpx::traits::future<int> == hpx::traits::is_future_v<int>);
+static_assert(hpx::future_type<int> == hpx::traits::is_future_v<int>);
 
-static_assert(hpx::traits::unique_future<hpx::future<int>>);
-static_assert(!hpx::traits::unique_future<hpx::shared_future<int>>);
-static_assert(hpx::traits::unique_future<hpx::future<int>> ==
+static_assert(hpx::unique_future<hpx::future<int>>);
+static_assert(!hpx::unique_future<hpx::shared_future<int>>);
+static_assert(hpx::unique_future<hpx::future<int>> ==
     hpx::traits::is_unique_future_v<hpx::future<int>>);
 
 static_assert(
-    hpx::traits::ref_wrapped_future<std::reference_wrapper<hpx::future<int>>>);
-static_assert(!hpx::traits::ref_wrapped_future<hpx::future<int>>);
+    hpx::ref_wrapped_future<std::reference_wrapper<hpx::future<int>>>);
+static_assert(!hpx::ref_wrapped_future<hpx::future<int>>);
 static_assert(
-    hpx::traits::ref_wrapped_future<std::reference_wrapper<hpx::future<int>>> ==
+    hpx::ref_wrapped_future<std::reference_wrapper<hpx::future<int>>> ==
     hpx::traits::is_ref_wrapped_future_v<
         std::reference_wrapper<hpx::future<int>>>);
 
-static_assert(hpx::traits::future_range<std::vector<hpx::future<int>>>);
-static_assert(!hpx::traits::future_range<std::vector<int>>);
-static_assert(hpx::traits::future_range<std::vector<hpx::future<int>>> ==
+static_assert(hpx::future_range<std::vector<hpx::future<int>>>);
+static_assert(!hpx::future_range<std::vector<int>>);
+static_assert(hpx::future_range<std::vector<hpx::future<int>>> ==
     hpx::traits::is_future_range_v<std::vector<hpx::future<int>>>);
 
-static_assert(hpx::traits::ref_wrapped_future_range<
+static_assert(hpx::ref_wrapped_future_range<
     std::reference_wrapper<std::vector<hpx::future<int>>>>);
-static_assert(
-    !hpx::traits::ref_wrapped_future_range<std::vector<hpx::future<int>>>);
+static_assert(!hpx::ref_wrapped_future_range<std::vector<hpx::future<int>>>);
 
-static_assert(hpx::traits::future_tuple<
-    hpx::tuple<hpx::future<int>, hpx::future<double>>>);
-static_assert(!hpx::traits::future_tuple<hpx::tuple<int, double>>);
-static_assert(hpx::traits::future_tuple<
-                  hpx::tuple<hpx::future<int>, hpx::future<double>>> ==
+static_assert(
+    hpx::future_tuple<hpx::tuple<hpx::future<int>, hpx::future<double>>>);
+static_assert(!hpx::future_tuple<hpx::tuple<int, double>>);
+static_assert(
+    hpx::future_tuple<hpx::tuple<hpx::future<int>, hpx::future<double>>> ==
     hpx::traits::is_future_tuple_v<
         hpx::tuple<hpx::future<int>, hpx::future<double>>>);
 

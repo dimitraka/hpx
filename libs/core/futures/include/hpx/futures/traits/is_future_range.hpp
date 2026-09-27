@@ -79,12 +79,17 @@ namespace hpx::traits {
         inline constexpr bool is_future_or_future_range_v =
             is_future_or_future_range<R>::value;
     }    // namespace detail
+}    // namespace hpx::traits
+
+namespace hpx {
 
     ///////////////////////////////////////////////////////////////////////////
-    // Companion concepts for the future-range traits above.
+    /// Detect a range of futures.
     HPX_CXX_CORE_EXPORT template <typename T>
-    concept future_range = is_future_range_v<T>;
+    concept future_range = hpx::traits::is_future_range_v<T>;
 
+    /// Detect a reference wrapper containing a range of futures.
     HPX_CXX_CORE_EXPORT template <typename T>
-    concept ref_wrapped_future_range = is_ref_wrapped_future_range_v<T>;
-}    // namespace hpx::traits
+    concept ref_wrapped_future_range =
+        hpx::traits::is_ref_wrapped_future_range_v<T>;
+}    // namespace hpx

@@ -89,17 +89,20 @@ namespace hpx::traits {
     HPX_CXX_CORE_EXPORT template <typename R>
     inline constexpr bool is_ref_wrapped_future_v =
         is_ref_wrapped_future<R>::value;
+}    // namespace hpx::traits
+
+namespace hpx {
 
     ///////////////////////////////////////////////////////////////////////////
-    // Companion concepts for the future traits above. Defined in
-    // hpx::traits (not hpx) so the concept name `future` does not collide
-    // with the class template hpx::future.
+    /// Detect a future type without conflicting with the hpx::future class.
     HPX_CXX_CORE_EXPORT template <typename T>
-    concept future = is_future_v<T>;
+    concept future_type = hpx::traits::is_future_v<T>;
 
+    /// Detect a unique future type.
     HPX_CXX_CORE_EXPORT template <typename T>
-    concept unique_future = is_unique_future_v<T>;
+    concept unique_future = hpx::traits::is_unique_future_v<T>;
 
+    /// Detect a reference wrapper containing a future.
     HPX_CXX_CORE_EXPORT template <typename T>
-    concept ref_wrapped_future = is_ref_wrapped_future_v<T>;
-}    // namespace hpx::traits
+    concept ref_wrapped_future = hpx::traits::is_ref_wrapped_future_v<T>;
+}    // namespace hpx
