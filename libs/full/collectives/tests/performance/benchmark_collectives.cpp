@@ -454,12 +454,11 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<std::size_t>(test_size), recv_data.size());
+            HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
             for (int value : recv_data)
             {
-                if (!HPX_TEST_EQ(static_cast<int>(i) *
-                            static_cast<int>(num_localities),
+                if (!HPX_TEST_EQ(
+                        static_cast<int>(i) * static_cast<int>(num_localities),
                         value))
                 {
                     break;
@@ -552,8 +551,7 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<std::size_t>(test_size), recv_data.size());
+            HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
             for (int value : recv_data)
             {
                 if (!HPX_TEST_EQ(static_cast<int>(i), value))
@@ -654,8 +652,8 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations,
             HPX_TEST_EQ(num_localities, recv_data.size());
             for (std::size_t j = 0; j != recv_data.size(); ++j)
             {
-                HPX_TEST_EQ(static_cast<std::size_t>(test_size),
-                    recv_data[j].size());
+                HPX_TEST_EQ(
+                    static_cast<std::size_t>(test_size), recv_data[j].size());
                 for (int value : recv_data[j])
                 {
                     if (!HPX_TEST_EQ(static_cast<int>(i + j), value))
@@ -746,8 +744,8 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations,
         HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
         for (int value : recv_data)
         {
-            if (!HPX_TEST_EQ(static_cast<int>(i) *
-                        static_cast<int>(num_localities),
+            if (!HPX_TEST_EQ(
+                    static_cast<int>(i) * static_cast<int>(num_localities),
                     value))
             {
                 break;
@@ -1164,12 +1162,11 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<std::size_t>(test_size), recv_data.size());
+            HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
             for (int value : recv_data)
             {
-                if (!HPX_TEST_EQ(static_cast<int>(i) *
-                            static_cast<int>(num_localities),
+                if (!HPX_TEST_EQ(
+                        static_cast<int>(i) * static_cast<int>(num_localities),
                         value))
                 {
                     break;
@@ -1240,8 +1237,7 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<std::size_t>(test_size), recv_data.size());
+            HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
             for (int value : recv_data)
             {
                 if (!HPX_TEST_EQ(static_cast<int>(i), value))
@@ -1319,8 +1315,8 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations,
             HPX_TEST_EQ(num_localities, recv_data.size());
             for (std::size_t j = 0; j != recv_data.size(); ++j)
             {
-                HPX_TEST_EQ(static_cast<std::size_t>(test_size),
-                    recv_data[j].size());
+                HPX_TEST_EQ(
+                    static_cast<std::size_t>(test_size), recv_data[j].size());
                 for (int value : recv_data[j])
                 {
                     if (!HPX_TEST_EQ(static_cast<int>(i + j), value))
@@ -1387,8 +1383,8 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations,
         HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
         for (int value : recv_data)
         {
-            if (!HPX_TEST_EQ(static_cast<int>(i) *
-                        static_cast<int>(num_localities),
+            if (!HPX_TEST_EQ(
+                    static_cast<int>(i) * static_cast<int>(num_localities),
                     value))
             {
                 break;
@@ -1550,12 +1546,11 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<std::size_t>(test_size), recv_data.size());
+            HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
             for (int value : recv_data)
             {
-                if (!HPX_TEST_EQ(static_cast<int>(i) *
-                            static_cast<int>(num_localities),
+                if (!HPX_TEST_EQ(
+                        static_cast<int>(i) * static_cast<int>(num_localities),
                         value))
                 {
                     break;
@@ -1629,8 +1624,7 @@ void test_multiple_use_with_generation_broadcast(int lpn,
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<std::size_t>(test_size), recv_data.size());
+            HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
             for (int value : recv_data)
             {
                 if (!HPX_TEST_EQ(static_cast<int>(i), value))
@@ -1710,8 +1704,8 @@ void test_multiple_use_with_generation_gather(int lpn, std::size_t iterations,
             HPX_TEST_EQ(num_localities, recv_data.size());
             for (std::size_t j = 0; j != recv_data.size(); ++j)
             {
-                HPX_TEST_EQ(static_cast<std::size_t>(test_size),
-                    recv_data[j].size());
+                HPX_TEST_EQ(
+                    static_cast<std::size_t>(test_size), recv_data[j].size());
                 for (int value : recv_data[j])
                 {
                     if (!HPX_TEST_EQ(static_cast<int>(i + j), value))
@@ -1782,8 +1776,8 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
         HPX_TEST_EQ(static_cast<std::size_t>(test_size), recv_data.size());
         for (int value : recv_data)
         {
-            if (!HPX_TEST_EQ(static_cast<int>(i) *
-                        static_cast<int>(num_localities),
+            if (!HPX_TEST_EQ(
+                    static_cast<int>(i) * static_cast<int>(num_localities),
                     value))
             {
                 break;
