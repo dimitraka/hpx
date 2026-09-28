@@ -318,6 +318,16 @@ void test_long_vector_serialization()
     }
 }
 
+void test_null_pointer_chunk()
+{
+    constexpr auto chunk =
+        hpx::serialization::create_pointer_chunk(nullptr, std::size_t{42});
+    static_assert(
+        chunk.type_ == hpx::serialization::chunk_type::chunk_type_pointer);
+    static_assert(chunk.data_.pos_ == nullptr);
+    static_assert(chunk.size() == 42);
+}
+
 void test_non_default_constructible()
 {
     std::vector<char> buffer;
@@ -351,6 +361,7 @@ void test_non_default_constructible()
 
 int main()
 {
+    test_null_pointer_chunk();
     test_bool();
     test<char>(
         (std::numeric_limits<char>::min)(), (std::numeric_limits<char>::max)());

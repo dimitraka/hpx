@@ -103,4 +103,11 @@ namespace hpx::serialization {
     {
         return create_const_pointer_chunk(pos, size);
     }
+
+    /// Create a mutable-pointer chunk with a null address.
+    HPX_CXX_CORE_EXPORT [[nodiscard]] constexpr serialization_chunk
+    create_pointer_chunk(std::nullptr_t, std::size_t size) noexcept
+    {
+        return create_pointer_chunk(static_cast<void*>(nullptr), size);
+    }
 }    // namespace hpx::serialization
